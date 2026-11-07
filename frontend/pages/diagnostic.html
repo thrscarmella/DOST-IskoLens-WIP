@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagnostic Analytics · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Diagnostic Analytics</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Diagnostic Analytics</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead">Why outcomes happen: which factors are linked to termination, and where rates are higher. The statistical tests run in the Python analytics service.</p>
+      <section class="card card-pad mt-24" id="root-cause" aria-labelledby="h-root-cause">
+        <h2 id="h-root-cause" style="font-size:16px; margin-bottom:4px;">Root Cause Analysis</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Pearson and Spearman correlations of each factor with termination, chi-square tests with Cram&eacute;r&rsquo;s V for categories, and the factors the risk model relies on most (SHAP).</p>
+        <div id="c-root-cause"></div>
+      </section>
+      <section class="card card-pad mt-24" id="termination-breakdown" aria-labelledby="h-termination-breakdown">
+        <h2 id="h-termination-breakdown" style="font-size:16px; margin-bottom:4px;">Termination Breakdown</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Approved terminations by grounds, year level and HEI.</p>
+        <div id="c-termination-breakdown"></div>
+      </section>
+      <section class="card card-pad mt-24" id="school-municipal-rates" aria-labelledby="h-school-municipal-rates">
+        <h2 id="h-school-municipal-rates" style="font-size:16px; margin-bottom:4px;">School &amp; Municipal Rates</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Termination and graduation rates per municipality.</p>
+        <div id="c-school-municipal-rates"></div>
+      </section>
+      <section class="card card-pad mt-24" id="school-performance-diagnostic" aria-labelledby="h-school-performance-diagnostic">
+        <h2 id="h-school-performance-diagnostic" style="font-size:16px; margin-bottom:4px;">School Performance Diagnostic</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Secondary schools whose scholars most often fall below the GWA requirement.</p>
+        <div id="c-school-performance-diagnostic"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../vendor/chartjs/chart.umd.min.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('diagnostic');
+const f3 = (v) => (v === null || v === undefined ? '—' : Number(v).toFixed(3));
+async function load() {
+  try {
+    const d = await IskoAPI.get('/api/analytics/diagnostic');
+    const put = (id, html) => { document.getElementById('c-' + id).innerHTML = html; };
+    const rc = d.root_cause;
+    if (!rc.available) put('root-cause', Live.serviceOff());
+    else if (!rc.enough_data) put('root-cause', Live.empty('No data yet', `These tests need at least ${rc.minimum || 30} scholars with a known outcome (graduated, delayed or terminated); there are ${rc.scholars_with_outcome || 0} now. They will run once the DOST Davao Oriental dataset is loaded.`));
+    else put('root-cause', `<p class="text-sm" style="margin-bottom:10px;">Based on ${rc.scholars_with_outcome} scholars with a known outcome.</p>
+      <h3 style="font-size:14px; margin:6px 0;">Correlation with termination</h3>${Live.table(['Factor', 'Pearson r', 'p-value', 'Spearman rho', 'p-value', 'n'], rc.correlations.map((c) => [c.factor, f3(c.pearson_r), f3(c.pearson_p), f3(c.spearman_rho), f3(c.spearman_p), c.n]))}
+      <h3 style="font-size:14px; margin:16px 0 6px;">Association with termination (categories)</h3>${Live.table(['Factor', 'Chi-square', 'p-value', 'Cramer V', 'Categories'], rc.associations.map((a) => [a.factor, f3(a.chi_square), f3(a.p_value), f3(a.cramers_v), a.categories]))}
+      <h3 style="font-size:14px; margin:16px 0 6px;">Most important factors in the risk model (SHAP)</h3>${rc.shap_top.length ? Live.table(['Factor', 'Mean |SHAP|'], rc.shap_top.map((s) => [s.factor, f3(s.importance)])) : '<p class="text-sm text-muted">Available after the model is trained (System Management, Recalibrate Model).</p>'}`);
+    const tb = d.termination_breakdown;
+    if (!tb.enough_data) put('termination-breakdown', Live.noData('The termination breakdown'));
+    else {
+      put('termination-breakdown', `<div class="two-col-grid"><div>${Live.box('ch-grounds', 260)}</div><div>${Live.table(['Year level', 'Terminations'], tb.by_year_level.map((x) => [x.name, x.count]))}<div class="mt-16">${Live.table(['HEI', 'Terminations'], tb.by_hei.map((x) => [x.name, x.count]))}</div></div></div>`);
+      Live.chart('ch-grounds', 'doughnut', tb.by_grounds.map((x) => x.name), [{ label: 'Terminations', data: tb.by_grounds.map((x) => x.count) }]);
+    }
+    const sm = d.school_municipal_rates;
+    if (!sm.enough_data) put('school-municipal-rates', Live.noData('Termination and graduation rates per municipality'));
+    else put('school-municipal-rates', Live.table(['Municipality', 'Scholars', 'Terminated', 'Termination rate', 'Graduated', 'Graduation rate'], sm.by_municipality.map((m) => [m.municipality, m.scholars, m.terminated, Live.pct(m.termination_rate), m.graduated, Live.pct(m.graduation_rate)])));
+    const sp = d.school_performance_diagnostic;
+    if (!sp.enough_data) put('school-performance-diagnostic', Live.noData('The school performance diagnostic'));
+    else put('school-performance-diagnostic', Live.table(['Secondary school', 'Scholars', 'With GWA on record', 'Below requirement', 'Below rate', 'Termination rate'], sp.by_school.map((s) => [s.school, s.scholars, s.with_gwa, s.below, Live.pct(s.below_rate), Live.pct(s.termination_rate)])));
+  } catch (err) { IskoAPI.fail(err, 'Could not load diagnostic analytics'); }
+}
+load();
+</script>
+</body>
+</html>

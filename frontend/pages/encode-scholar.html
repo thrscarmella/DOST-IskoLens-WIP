@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encode New Scholar · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  .encode-layout { display:grid; grid-template-columns: 1fr 300px; gap:20px; align-items:start; }
+  @media (max-width: 1000px) { .encode-layout { grid-template-columns: 1fr; } }
+  .tip-card { background: var(--navy-900); color:#fff; border-radius: var(--radius-md); padding:20px; }
+  .tip-card h4 { color:#fbbf24; font-size:13.5px; display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+  .tip-item { display:flex; gap:10px; align-items:flex-start; margin-bottom:12px; font-size:12.5px; color:#cbd5e8; }
+  .tip-item i { color:#22c55e; margin-top:2px; }
+  .review-section { border:1px dashed var(--gray-300); border-radius:10px; padding:20px; }
+  .review-heading { display:flex; align-items:center; gap:8px; font-weight:700; color:var(--blue-600); font-size:13.5px; margin-bottom:14px; }
+  .review-field-label { text-transform:uppercase; font-size:10.5px; font-weight:700; color:var(--gray-500); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Encode New Scholar</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; <a href="scholar-records.html">Scholar Records</a> &gt; Encode Scholars</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="IskoImport.open(res => setTimeout(() => location.href = 'scholar-records.html', 900))"><i class="fa-solid fa-download"></i> Import CSV</button>
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="wizard-steps">
+        <div class="wizard-step active" data-step="1"><div class="step-circle">1</div><span>Personal Information</span></div>
+        <div class="wizard-connector"></div>
+        <div class="wizard-step" data-step="2"><div class="step-circle">2</div><span>Scholarship Details</span></div>
+        <div class="wizard-connector"></div>
+        <div class="wizard-step" data-step="3"><div class="step-circle">3</div><span>Higher Education</span></div>
+        <div class="wizard-connector"></div>
+        <div class="wizard-step" data-step="4"><div class="step-circle">4</div><span>Review & Save</span></div>
+      </div>
+
+      <div class="encode-layout">
+        <div>
+          <!-- STEP 1 -->
+          <div class="card card-pad step-panel" id="step-1">
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+              <div class="stat-icon"><i class="fa-solid fa-user"></i></div>
+              <div><h3 style="font-size:15px;">Personal Information</h3><div class="text-sm text-muted">Basic details of the scholarship grantee</div></div>
+            </div>
+            <div class="divider"></div>
+            <p class="text-sm text-muted" style="margin-bottom:14px;">Scholars are identified by their Scholar ID, which is given when the record is saved. Names are not collected.</p>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label" for="f-gender">Sex <span class="required">*</span></label>
+                <select class="form-control" id="f-gender" required><option value="">Select sex</option></select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="max-width:340px;"><label class="form-label">Date of Birth <span class="required">*</span></label><input type="date" class="form-control" id="f-dob" required></div>
+              <div class="form-group"><label class="form-label">Mobile Number <span class="required">*</span></label><input type="tel" class="form-control" id="f-phone" placeholder="e.g. 0917 123 4567" required></div>
+              <div class="form-group"><label class="form-label">Email (optional)</label><input type="email" class="form-control" id="f-email" placeholder="e.g. juan.santos@example.com"></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:10px;">
+              <button class="btn btn-primary" onclick="nextStep(1)">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- STEP 2 -->
+          <div class="card card-pad step-panel" id="step-2" style="display:none;">
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+              <div class="stat-icon"><i class="fa-solid fa-award"></i></div>
+              <div><h3 style="font-size:15px;">Scholarship Details</h3><div class="text-sm text-muted">Program, municipality, and secondary school information</div></div>
+            </div>
+            <div class="divider"></div>
+            <div class="form-row">
+              <div class="form-group"><label class="form-label">Scholarship Program <span class="required">*</span></label>
+                <select class="form-control" id="f-program" required><option value="">Select program</option></select></div>
+              <div class="form-group"><label class="form-label">Scholarship Cycle <span class="required">*</span></label>
+                <select class="form-control" id="f-cycle" required><option value="">Select cycle</option></select></div>
+            </div>
+            <div class="form-group"><label class="form-label">Municipality of Origin <span class="required">*</span></label>
+              <select class="form-control" id="f-municipality" required><option value="">Select municipality</option></select></div>
+            <div class="form-group"><label class="form-label">Secondary School Attended <span class="required">*</span></label>
+              <select class="form-control" id="f-school" required><option value="">Select municipality first</option></select></div>
+            <div class="form-group" style="max-width:340px;"><label class="form-label">Date of Scholarship Enrollment <span class="required">*</span></label><input type="date" class="form-control" id="f-enrolldate" required></div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+              <button class="btn btn-outline" onclick="prevStep(2)">Back</button>
+              <button class="btn btn-primary" onclick="nextStep(2)">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- STEP 3 -->
+          <div class="card card-pad step-panel" id="step-3" style="display:none;">
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+              <div class="stat-icon"><i class="fa-solid fa-building-columns"></i></div>
+              <div><h3 style="font-size:15px;">Higher Education Information</h3><div class="text-sm text-muted">College institution and degree program details</div></div>
+            </div>
+            <div class="divider"></div>
+            <div class="form-group"><label class="form-label">Higher Education Institution (HEI) <span class="required">*</span></label>
+              <select class="form-control" id="f-hei" required><option value="">Select HEI</option></select></div>
+            <div class="form-group"><label class="form-label">Degree Program <span class="required">*</span></label>
+              <input class="form-control" id="f-degree" placeholder="e.g BS Information Technology" required>
+              <div class="form-hint">Enter the full degree program name as listed in the HEI curriculum.</div></div>
+            <div class="form-group" style="max-width:340px;"><label class="form-label">Current Year Level <span class="required">*</span></label>
+              <select class="form-control" id="f-yearlevel" required><option value="">Select year level</option></select></div>
+            <div style="display:flex; justify-content:space-between; margin-top:10px;">
+              <button class="btn btn-outline" onclick="prevStep(3)">Back</button>
+              <button class="btn btn-primary" onclick="nextStep(3)">Next <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+          </div>
+
+          <!-- STEP 4 -->
+          <div class="card card-pad step-panel" id="step-4" style="display:none;">
+            <div style="display:flex; gap:12px; align-items:center; margin-bottom:6px;">
+              <div class="stat-icon"><i class="fa-solid fa-clipboard-check"></i></div>
+              <div><h3 style="font-size:15px;">Review & Save Record</h3><div class="text-sm text-muted">Verify all information before saving to the database</div></div>
+            </div>
+            <div class="divider"></div>
+            <div class="review-section">
+              <div class="review-heading"><i class="fa-solid fa-user"></i> PERSONAL INFORMATION</div>
+              <div class="form-row" style="margin-bottom:22px;">
+                <div><div class="review-field-label">Sex</div><div id="rv-gender" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Date of Birth</div><div id="rv-dob" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Mobile Number</div><div id="rv-phone" style="margin-top:4px;">—</div></div>
+              </div>
+              <div class="review-heading"><i class="fa-solid fa-award"></i> SCHOLARSHIP DETAILS</div>
+              <div class="form-row" style="margin-bottom:22px;">
+                <div><div class="review-field-label">Program</div><div id="rv-program" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Cycle</div><div id="rv-cycle" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Municipality</div><div id="rv-municipality" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Secondary School</div><div id="rv-school" style="margin-top:4px;">—</div></div>
+              </div>
+              <div class="review-heading"><i class="fa-solid fa-building-columns"></i> HIGHER EDUCATION</div>
+              <div class="form-row">
+                <div><div class="review-field-label">HEI</div><div id="rv-hei" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Degree Program</div><div id="rv-degree" style="margin-top:4px;">—</div></div>
+                <div><div class="review-field-label">Year Level</div><div id="rv-yearlevel" style="margin-top:4px;">—</div></div>
+              </div>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-top:16px;">
+              <button class="btn btn-outline" onclick="prevStep(4)">Back</button>
+              <button class="btn btn-warning" onclick="saveRecord()"><i class="fa-solid fa-floppy-disk"></i> Save Scholar Record</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="tip-card">
+          <h4><i class="fa-solid fa-lightbulb"></i> Encoding Tips</h4>
+          <div class="tip-item"><i class="fa-solid fa-circle-check"></i> Verify the scholar's PSA birth certificate before encoding the date of birth.</div>
+          <div class="tip-item"><i class="fa-solid fa-circle-check"></i> Ensure the municipality matches the scholar's Certificate of Indigency.</div>
+          <div class="tip-item"><i class="fa-solid fa-circle-check"></i> Scholarship Cycle should match the DOST Davao Oriental official cycle designation.</div>
+          <div class="tip-item"><i class="fa-solid fa-circle-check"></i> <span>All required fields (<span style="color:#f87171;">*</span>) must be completed before saving.</span></div>
+          <div id="save-note" style="display:none; margin-top:16px; background:#16213d; border-radius:8px; padding:14px; font-size:11.5px; color:#9db8ec;">
+            Once saved, this record will be added to the centralized DOST-IskoLens scholar database. You can edit or update the record at any time from Scholar Records.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="import-csv-modal"></div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/import-modal.js"></script>
+<script>
+renderShell('scholars');
+let LK = null;
+const FIELD_MAP = { gender: 'f-gender',
+  birth_date: 'f-dob', mobile_number: 'f-phone', email: 'f-email', program: 'f-program', cycle: 'f-cycle',
+  municipality: 'f-municipality', secondary_school: 'f-school', enrollment_date: 'f-enrolldate', hei: 'f-hei',
+  degree_program: 'f-degree', year_level: 'f-yearlevel' };
+const STEP_OF = { gender: 1, birth_date: 1, mobile_number: 1, email: 1,
+  program: 2, cycle: 2, municipality: 2, secondary_school: 2, enrollment_date: 2, hei: 3, degree_program: 3, year_level: 3 };
+
+function setStepUI(n) {
+  document.querySelectorAll('.wizard-step').forEach(s => {
+    const step = parseInt(s.dataset.step);
+    s.classList.remove('active', 'done');
+    if (step < n) s.classList.add('done');
+    if (step === n) s.classList.add('active');
+  });
+  document.querySelectorAll('.step-panel').forEach(p => p.style.display = 'none');
+  document.getElementById('step-' + n).style.display = 'block';
+  document.getElementById('save-note').style.display = n === 4 ? 'block' : 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function nextStep(current) {
+  const panel = document.getElementById('step-' + current);
+  if (!validateForm(panel)) {
+    showToast('Missing information', 'Complete all required fields.', 'error');
+    return;
+  }
+  if (current === 3) populateReview();
+  setStepUI(current + 1);
+}
+function prevStep(current) { setStepUI(current - 1); }
+
+const val = id => document.getElementById(id).value.trim();
+const selText = id => { const el = document.getElementById(id); return el.selectedIndex > 0 ? el.options[el.selectedIndex].text : '—'; };
+
+function populateReview() {
+  document.getElementById('rv-gender').textContent = val('f-gender');
+  document.getElementById('rv-dob').textContent = IskoFmt.dateLong(val('f-dob'));
+  document.getElementById('rv-phone').textContent = val('f-phone') + (val('f-email') ? ' · ' + val('f-email') : '');
+  document.getElementById('rv-program').textContent = selText('f-program');
+  document.getElementById('rv-cycle').textContent = selText('f-cycle');
+  document.getElementById('rv-municipality').textContent = selText('f-municipality');
+  document.getElementById('rv-school').textContent = selText('f-school');
+  document.getElementById('rv-hei').textContent = selText('f-hei');
+  document.getElementById('rv-degree').textContent = val('f-degree');
+  document.getElementById('rv-yearlevel').textContent = selText('f-yearlevel');
+}
+
+async function saveRecord() {
+  const btn = document.querySelector('#step-4 .btn-warning');
+  btn.disabled = true;
+  IskoAPI.clearFieldErrors(FIELD_MAP);
+  const body = {};
+  Object.entries(FIELD_MAP).forEach(([k, id]) => body[k] = val(id));
+  try {
+    const res = await IskoAPI.post('/api/scholars', body);
+    showToast('Scholar record saved', `Added as ${res.scholar.code}.`);
+    setTimeout(() => { window.location.href = 'scholar-profile.html?id=' + encodeURIComponent(res.scholar.code); }, 1000);
+  } catch (err) {
+    btn.disabled = false;
+    IskoAPI.showFieldErrors(err, FIELD_MAP);
+    const steps = Object.keys(err.fieldErrors).map(f => STEP_OF[f]).filter(Boolean);
+    if (steps.length) setStepUI(Math.min(...steps));
+    IskoAPI.fail(err, 'Record not saved');
+  }
+}
+
+function fillSchools() {
+  const mid = document.getElementById('f-municipality').value;
+  const schools = LK.schools.filter(s => String(s.municipality_id) === mid);
+  IskoAPI.fillSelect('f-school', schools, mid ? (schools.length ? 'Select school' : 'No schools listed for this municipality') : 'Select municipality first');
+}
+
+(async function init() {
+  try {
+    LK = await IskoAPI.lookups();
+    IskoAPI.fillSelect('f-program', LK.programs, 'Select program');
+    IskoAPI.fillSelect('f-cycle', LK.cycles, 'Select cycle', '', 'label');
+    IskoAPI.fillSelect('f-municipality', LK.municipalities, 'Select municipality');
+    IskoAPI.fillSelect('f-hei', LK.heis, 'Select HEI');
+    IskoAPI.fillSelect('f-yearlevel', LK.year_levels, 'Select year level', '', 'label', 'value');
+    IskoAPI.fillSelect('f-gender', LK.options.sexes, 'Select sex', '', 'label', 'value');
+    document.getElementById('f-municipality').addEventListener('change', fillSchools);
+    const today = new Date().toISOString().slice(0, 10);
+    document.getElementById('f-enrolldate').max = today;
+    document.getElementById('f-dob').max = today;
+  } catch (err) { IskoAPI.fail(err, 'Could not load the form lists'); }
+})();
+</script>
+</body>
+</html>

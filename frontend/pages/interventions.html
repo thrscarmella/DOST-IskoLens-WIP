@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interventions · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Interventions</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Interventions</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead" style="margin-bottom:16px;">Cases are opened automatically for active scholars at High or Moderate risk. Claim a case, log what you do, and close it with the outcome. <span id="iv-source" class="text-muted"></span></p>
+      <div class="stat-grid" id="iv-stats"></div>
+      <div class="card card-pad mt-24">
+        <div class="tabs-row" id="iv-tabs" role="tablist">
+          <button class="tab-btn active" role="tab" data-tab="open">Open</button>
+          <button class="tab-btn" role="tab" data-tab="mine">My Cases</button>
+          <button class="tab-btn" role="tab" data-tab="claimed">In Progress</button>
+          <button class="tab-btn" role="tab" data-tab="closed">Closed</button>
+        </div>
+        <div id="iv-list"></div>
+      </div>
+    </main>
+  </div>
+</div>
+<div class="side-drawer-overlay" id="case-drawer-overlay"></div>
+<div class="side-drawer" id="case-drawer">
+  <div class="side-drawer-header"><h3 id="case-title">Case</h3><button class="modal-close" onclick="closeDrawer('case-drawer')" aria-label="Close">&times;</button></div>
+  <div class="side-drawer-body" id="case-body"></div>
+</div>
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('prescriptive');
+let tab = 'open'; let META = { actions: [], outcome_options: [] }; let CURRENT = null;
+const riskB = (lvl) => `<span class="badge ${{ High: 'badge-red', Moderate: 'badge-amber', Low: 'badge-green' }[lvl] || 'badge-gray'}">${esc(lvl)}</span>`;
+async function load() {
+  try {
+    const d = await IskoAPI.get('/api/interventions?tab=' + tab);
+    META = d;
+    document.getElementById('iv-source').textContent = d.risk_source === 'model' ? 'Risk levels come from the trained model.' : 'Until a risk model is trained, risk follows academic standing (Failed = High, Probation = Moderate).';
+    document.getElementById('iv-stats').innerHTML = `
+      <div class="stat-card accent-red"><div class="stat-value">${d.counts.open}</div><div class="stat-label">Open cases</div><div class="stat-delta flat">Waiting for an officer</div></div>
+      <div class="stat-card accent-amber"><div class="stat-value">${d.counts.claimed}</div><div class="stat-label">In progress</div><div class="stat-delta flat">${d.counts.mine} handled by you</div></div>
+      <div class="stat-card accent-green"><div class="stat-value">${d.counts.closed}</div><div class="stat-label">Closed</div><div class="stat-delta flat">${esc(Object.entries(d.outcomes).map(([k, v]) => `${v} ${k}`).join(', ') || 'No outcomes yet')}</div></div>`;
+    document.getElementById('iv-list').innerHTML = d.cases.length ? Live.table(['Scholar ID', 'Risk', 'Reason', 'Status', 'Handled by', 'Updated', ''],
+      d.cases.map((c) => [`<div class="cell-primary">${esc(c.scholar ? c.scholar.code : '—')}</div><div class="cell-sub">${esc(c.scholar ? c.scholar.municipality : '')}</div>`,
+        riskB(c.risk_level), c.reason, { open: 'Open', claimed: 'In progress', closed: `Closed: ${c.outcome}` }[c.status] || c.status, c.claimed_by || '—', IskoFmt.relative(c.updated_at),
+        `<button class="btn btn-outline btn-sm" onclick="openCase(${c.id})">Open case</button>`]), 'Intervention cases')
+      : Live.empty(tab === 'open' ? 'No open cases' : 'Nothing here', tab === 'open' ? 'No active scholar is at High or Moderate risk right now.' : 'Cases will be listed here.', 'fa-clipboard-check');
+  } catch (err) { IskoAPI.fail(err, 'Could not load cases'); }
+}
+async function openCase(id) {
+  try { const d = await IskoAPI.get('/api/interventions/' + id); CURRENT = d.case; renderCase(d); openDrawer('case-drawer'); }
+  catch (err) { IskoAPI.fail(err); }
+}
+function renderCase(d) {
+  const c = d.case; const me = ISKOLENS_SESSION.user.id; const admin = ISKOLENS_SESSION.user.role === 'admin';
+  const mineOrAdmin = c.claimed_by_id === me || admin;
+  document.getElementById('case-title').textContent = c.scholar ? c.scholar.code : 'Case';
+  document.getElementById('case-body').innerHTML = `
+    <p class="text-sm" style="margin-bottom:8px;">${riskB(c.risk_level)} &nbsp;${esc(c.reason)}</p>
+    <p class="text-sm text-muted" style="margin-bottom:12px;">${esc(c.scholar ? `${c.scholar.municipality} · ${c.scholar.hei} · ${c.scholar.year_level} year · ${c.scholar.program}` : '')}
+      &nbsp;<a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(c.scholar ? c.scholar.code : '')}">Open profile</a></p>
+    <h4 style="font-size:13px; margin:10px 0 6px;">Suggested actions</h4>
+    <ul style="padding-left:18px; list-style:disc; font-size:13.5px; line-height:1.7;">${c.recommended_actions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>
+    <p class="inline-note" style="margin:6px 0 14px;">Suggestions only; follow DOST Davao Oriental policy.</p>
+    <p class="text-sm" style="margin-bottom:12px;"><strong>Status:</strong> ${esc({ open: 'Open', claimed: `In progress (${c.claimed_by})`, closed: `Closed: ${c.outcome}` }[c.status])}</p>
+    ${c.status === 'open' ? '<button class="btn btn-primary" onclick="caseAct(\'claim\')"><i class="fa-solid fa-hand" aria-hidden="true"></i> Claim this case</button>' : ''}
+    ${c.status === 'claimed' && mineOrAdmin ? `
+      <div class="card card-pad" style="margin:12px 0;">
+        <h4 style="font-size:13px; margin-bottom:8px;">Log an action</h4>
+        <div class="form-group"><label class="form-label" for="lg-type">Action</label><select class="form-control" id="lg-type">${d.actions.map((a) => `<option>${esc(a)}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label" for="lg-notes">What was done and agreed</label><textarea class="form-control" id="lg-notes" rows="3"></textarea></div>
+        <button class="btn btn-primary btn-sm" onclick="logAction()">Save to log</button>
+      </div>
+      <div class="card card-pad" style="margin:12px 0;">
+        <h4 style="font-size:13px; margin-bottom:8px;">Close the case</h4>
+        <div class="form-group"><label class="form-label" for="cl-outcome">Outcome</label><select class="form-control" id="cl-outcome">${d.outcome_options.map((a) => `<option>${esc(a)}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label" for="cl-notes">Summary</label><textarea class="form-control" id="cl-notes" rows="2"></textarea></div>
+        <button class="btn btn-outline btn-sm" onclick="closeCase()">Close case</button>
+        <button class="btn btn-danger-outline btn-sm" onclick="releaseCase()">Release</button>
+      </div>` : ''}
+    <h4 style="font-size:13px; margin:14px 0 6px;">Monitoring log</h4>
+    ${c.logs.length ? `<ul style="font-size:13px; line-height:1.6;">${c.logs.map((l) => `<li style="margin-bottom:8px;"><strong>${esc(l.action_type)}</strong> · ${esc(l.by)} · ${esc(IskoFmt.dateTime(l.created_at))}${l.notes ? `<div class="text-muted">${esc(l.notes)}</div>` : ''}</li>`).join('')}</ul>` : '<p class="text-sm text-muted">No entries yet.</p>'}`;
+}
+async function caseAct(path, body) {
+  try { const r = await IskoAPI.post(`/api/interventions/${CURRENT.id}/${path}`, body || {}); CURRENT = r.case; renderCase({ case: r.case, actions: META.actions, outcome_options: META.outcome_options }); load(); return r; }
+  catch (err) { IskoAPI.showFieldErrors(err, { notes: path === 'close' ? 'cl-notes' : 'lg-notes', reason: 'lg-notes' }); IskoAPI.fail(err); return null; }
+}
+async function logAction() { if (await caseAct('log', { action_type: document.getElementById('lg-type').value, notes: document.getElementById('lg-notes').value })) showToast('Saved to the log', ''); }
+async function closeCase() { if (await caseAct('close', { outcome: document.getElementById('cl-outcome').value, notes: document.getElementById('cl-notes').value })) showToast('Case closed', ''); }
+async function releaseCase() {
+  const reason = prompt('Why is the case being released? (e.g. reassigned to another officer)');
+  if (reason !== null && await caseAct('release', { reason })) showToast('Case released', 'It is open for other officers again.');
+}
+document.querySelectorAll('#iv-tabs .tab-btn').forEach((b) => b.addEventListener('click', () => {
+  tab = b.dataset.tab; document.querySelectorAll('#iv-tabs .tab-btn').forEach((x) => x.classList.toggle('active', x === b)); load();
+}));
+load();
+// Opened from the Prescriptive page: show that case directly
+const caseParam = new URLSearchParams(location.search).get('case');
+if (caseParam && /^\d+$/.test(caseParam)) openCase(Number(caseParam));
+</script>
+</body>
+</html>

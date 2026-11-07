@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account Pending Approval · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-header">
+    <img src="../assets/images/dost-logo.png" alt="DOST logo">
+    <div class="auth-header-text">
+      <div class="rep-line">Republic of the Philippines</div>
+      <div class="inst-line">Science Education Institute</div>
+      <div class="brand-line">DOST - IskoLens</div>
+    </div>
+  </div>
+
+  <div class="auth-body">
+    <div class="auth-card">
+      <div class="auth-status-icon" id="status-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+      <h1 style="margin-bottom:6px;" id="status-heading">Account Pending Approval</h1>
+      <p class="auth-sub" id="greeting-text" style="margin-bottom:24px;">Thanks for signing up! Your request has been sent for review.</p>
+
+      <div class="auth-summary-card">
+        <div class="auth-summary-row"><span class="as-label">Name</span><span class="as-value" id="sum-name">—</span></div>
+        <div class="auth-summary-row"><span class="as-label">Email</span><span class="as-value" id="sum-email">—</span></div>
+        <div class="auth-summary-row"><span class="as-label">Username</span><span class="as-value" id="sum-username">—</span></div>
+        <div class="auth-summary-row"><span class="as-label">Requested Role</span><span class="as-value">Scholarship Officer</span></div>
+        <div class="auth-summary-row"><span class="as-label">Submitted</span><span class="as-value" id="sum-date">—</span></div>
+        <div class="auth-summary-row"><span class="as-label">Status</span><span class="as-value" id="sum-status"><span class="badge badge-amber"><i class="fa-solid fa-clock"></i> Pending Approval</span></span></div>
+      </div>
+
+      <div class="auth-status-note" id="status-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>A DOST Davao Oriental Administrator needs to review and approve your account before you can sign in. This is a manual step to keep scholar records secure and compliant with the Data Privacy Act of 2012. You will receive an email once your account is reviewed.</div>
+      </div>
+
+      <button class="auth-btn-primary" id="status-action-btn" onclick="checkStatus()"><i class="fa-solid fa-rotate-right"></i>&nbsp; Check Status Again</button>
+
+      <div class="auth-footnote">
+        <a class="auth-link" href="login.html">Back to Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+let statusToken = params.get('token');
+try { statusToken = statusToken || localStorage.getItem('iskolens_signup_token'); } catch (e) {}
+let current = null;
+
+async function fetchStatus() {
+  if (!statusToken) throw new Error('No sign-up request was found in this browser. Submit a request from the sign-up page.');
+  return IskoAPI.get('/api/auth/signup-status?token=' + encodeURIComponent(statusToken));
+}
+
+function renderStatus(data) {
+  current = data;
+  const firstName = (data.name || 'there').split(' ')[0];
+  document.getElementById('sum-name').textContent = data.name;
+  document.getElementById('sum-email').textContent = data.email;
+  document.getElementById('sum-username').textContent = data.username;
+  document.getElementById('sum-date').textContent = IskoFmt.date(data.submitted_at);
+  const icon = document.getElementById('status-icon');
+  const btn = document.getElementById('status-action-btn');
+  if (data.status === 'approved') {
+    icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+    icon.style.background = 'rgba(34, 197, 94, 0.14)';
+    icon.style.color = 'var(--green-500)';
+    document.getElementById('status-heading').textContent = 'Account approved';
+    document.getElementById('greeting-text').textContent = `Good news, ${firstName}: your account has been approved. You can now sign in.`;
+    document.getElementById('sum-status').innerHTML = '<span class="badge badge-green"><i class="fa-solid fa-circle-check"></i> Approved</span>';
+    document.getElementById('status-note').style.display = 'none';
+    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i>&nbsp; Go to Login';
+    btn.onclick = () => { try { localStorage.removeItem('iskolens_signup_token'); } catch (e) {} window.location.href = 'login.html'; };
+  } else if (data.status === 'rejected' || data.status === 'inactive') {
+    icon.innerHTML = '<i class="fa-solid fa-circle-xmark"></i>';
+    icon.style.background = 'rgba(239, 68, 68, 0.14)';
+    icon.style.color = 'var(--red-500)';
+    document.getElementById('status-heading').textContent = 'Account request declined';
+    document.getElementById('greeting-text').textContent = `Hi ${firstName}, your account request could not be approved at this time.`;
+    document.getElementById('sum-status').innerHTML = '<span class="badge badge-red"><i class="fa-solid fa-circle-xmark"></i> Declined</span>';
+    document.getElementById('status-note').innerHTML = '<i class="fa-solid fa-circle-info"></i><div>Contact your DOST Davao Oriental Administrator for more information.</div>';
+  } else {
+    document.getElementById('greeting-text').textContent = `Hi, ${firstName}! Your Scholarship Officer account request has been sent to your DOST Davao Oriental Administrator for review.`;
+  }
+}
+
+async function checkStatus() {
+  try {
+    const data = await fetchStatus();
+    if (data.status === 'pending' && current) {
+      showToast('Still pending', 'An Administrator has not reviewed this request yet. Check back later.', 'warning');
+    }
+    renderStatus(data);
+  } catch (err) {
+    showToast('Status unavailable', err.message, 'error');
+  }
+}
+
+checkStatus();
+</script>
+</body>
+</html>

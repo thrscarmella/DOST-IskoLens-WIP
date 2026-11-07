@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPI Reports · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>KPI Reports</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; KPI Reports</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead" style="margin-bottom:20px;">Generate KPI reports from the records in DOST-IskoLens as PDF or CSV. Every report is saved in the history (View Generated Reports).</p>
+      <div class="callout" id="kpi-note" style="margin-bottom:20px;"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div id="kpi-note-text"></div></div>
+      <div class="card card-pad" style="max-width:640px;">
+        <h3 style="font-size:15px; margin-bottom:14px;">Generate a Report</h3>
+        <div class="form-group"><label class="form-label" for="kpi-type">Report <span class="required">*</span></label><select class="form-control" id="kpi-type"></select></div>
+        <div class="form-group"><label class="form-label" for="kpi-cycle">Scholarship cycle</label><select class="form-control" id="kpi-cycle"></select></div>
+        <div class="form-group"><label class="form-label" for="kpi-format">Format</label><select class="form-control" id="kpi-format"></select></div>
+        <button class="btn btn-primary" id="kpi-btn" onclick="generate()"><i class="fa-solid fa-file-export" aria-hidden="true"></i> Generate</button>
+      </div>
+      <div class="card card-pad mt-24"><h3 style="font-size:15px; margin-bottom:12px;">Latest Reports</h3><div id="kpi-latest"></div></div>
+    </main>
+  </div>
+</div>
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('kpi');
+async function load() {
+  try {
+    const t = await IskoAPI.get('/api/kpi/types');
+    document.getElementById('kpi-note-text').textContent = t.note;
+    const sel = document.getElementById('kpi-type'); const keep = sel.value;
+    sel.innerHTML = t.types.map((x) => `<option value="${esc(x.id)}">${esc(x.title)}</option>`).join(''); if (keep) sel.value = keep;
+    document.getElementById('kpi-cycle').innerHTML = '<option value="">All cycles</option>' + t.cycles.map((c) => `<option value="${c.id}">${esc(c.label)}</option>`).join('');
+    if (!document.getElementById('kpi-format').options.length) IskoAPI.fillSelect('kpi-format', (await IskoAPI.lookups()).options.report_formats, null, '', 'label', 'value');
+    const pref = (ISKOLENS_SESSION.preferences || {}).export_format; if (pref) document.getElementById('kpi-format').value = pref;
+    const h = await IskoAPI.get('/api/kpi/reports');
+    document.getElementById('kpi-latest').innerHTML = h.reports.length ? Live.table(['Generated', 'Report', 'Period', 'Format', ''], h.reports.slice(0, 5).map((r) =>
+      [IskoFmt.dateTime(r.generated_at), r.title, r.period_label, r.format.toUpperCase(), `<a class="link-action" href="/api/kpi/reports/${r.id}/download${r.format === 'pdf' ? '?inline=1' : ''}" target="_blank" rel="noopener">Open</a>`]))
+      : Live.empty('No reports generated yet', 'Choose a report above and click Generate.', 'fa-file-lines');
+  } catch (err) { IskoAPI.fail(err, 'Could not load KPI reports'); }
+}
+async function generate() {
+  const b = document.getElementById('kpi-btn'); b.disabled = true;
+  try {
+    const r = await IskoAPI.post('/api/kpi/reports', { type: document.getElementById('kpi-type').value, cycle_id: document.getElementById('kpi-cycle').value || null, format: document.getElementById('kpi-format').value });
+    showToast('Report generated', `${r.report.title} (${r.report.period_label}). It is saved in the history.`);
+    window.open(`/api/kpi/reports/${r.report.id}/download${r.report.format === 'pdf' ? '?inline=1' : ''}`, '_blank', 'noopener');
+    load();
+  } catch (err) { IskoAPI.fail(err, 'Report not generated'); } finally { b.disabled = false; }
+}
+load();
+</script>
+</body>
+</html>

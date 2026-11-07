@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Profile · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  .profile-stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; text-align:center; padding:22px 0; border-top:1px solid var(--gray-100); margin-top:22px; }
+  @media (max-width:700px){ .profile-stats-row { grid-template-columns:repeat(2,1fr); } }
+  .profile-stats-row .ps-value { font-family:var(--font-display); font-size:24px; font-weight:700; color:var(--navy-900); }
+  .profile-stats-row .ps-label { font-size:12px; color:var(--gray-500); margin-top:4px; }
+
+  /* ---- Settings tab (moved from the old settings.html) ---- */
+  .toggle-switch { position:relative; width:42px; height:24px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:var(--gray-300); border-radius:999px; cursor:pointer; transition:.2s; }
+  .toggle-slider::before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.2s; }
+  .toggle-switch input:checked + .toggle-slider { background: var(--blue-600); }
+  .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+  .pref-row { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid var(--gray-100); }
+  .settings-card + .settings-card { margin-top:20px; }
+  .settings-card-desc { margin:4px 0 18px; }
+  .settings-card-actions { display:flex; justify-content:flex-end; margin-top:6px; }
+
+  /* ---- Guides tab ---- */
+  .guide-chips { display:flex; flex-wrap:wrap; gap:8px; margin:16px 0 20px; }
+  .guide-chip { background:#fff; border:1px solid var(--gray-200); border-radius:999px; padding:7px 15px; font-size:13px; font-weight:500; color:var(--gray-700); cursor:pointer; }
+  .guide-chip:hover { border-color:var(--blue-500); color:var(--blue-600); }
+  .guide-card + .guide-card { margin-top:20px; }
+  .guide-card-head { display:flex; align-items:center; gap:14px; margin-bottom:16px; }
+  .guide-icon { width:40px; height:40px; display:flex; align-items:center; justify-content:center; background:var(--blue-50); color:var(--blue-600); font-size:16px; flex-shrink:0; }
+  .guide-card-head h3 { font-size:17px; }
+  .guide-steps { list-style:none; margin:0; padding:0; }
+  .guide-steps li { display:flex; gap:12px; align-items:flex-start; padding:6px 0; font-size:13.5px; line-height:1.55; color:var(--gray-700); }
+  .guide-num { width:22px; height:22px; flex-shrink:0; display:flex; align-items:center; justify-content:center; background:var(--gray-100); color:var(--gray-500); font-size:11.5px; font-weight:600; margin-top:1px; }
+  .guide-empty { text-align:center; padding:40px 20px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>My Profile</h1>
+        <div class="breadcrumb" id="page-breadcrumb"><a href="dashboard.html">Home</a> &gt; My Profile</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="tabs-row" id="main-tabs">
+        <button class="tab-btn active" data-main="profile">My Profile</button>
+        <button class="tab-btn" data-main="settings">Settings</button>
+        <button class="tab-btn" data-main="guides">Guides</button>
+      </div>
+
+      <!-- ===================== MY PROFILE ===================== -->
+      <section id="section-profile">
+        <div class="card card-pad">
+          <div style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+            <div style="position:relative;">
+              <div class="avatar-circle" style="width:72px; height:72px; font-size:24px; background:var(--blue-600);" id="profile-avatar">OJ</div>
+            </div>
+            <div style="flex:1; min-width:200px;">
+              <h2 style="font-size:19px;" class="js-user-name">Officer Jay</h2>
+              <div class="text-sm text-muted" id="profile-role-label">Scholarship Officer</div>
+              <div style="display:flex; gap:8px; margin-top:8px;">
+                <span class="badge badge-blue"><i class="fa-solid fa-shield"></i> DOST Davao Oriental Staff</span>
+                <span class="badge badge-green badge-dot">Active</span>
+              </div>
+            </div>
+            <button class="btn btn-outline" onclick="document.querySelector('[data-tab=details]').click()"><i class="fa-solid fa-pen"></i> Edit Profile</button>
+          </div>
+
+          <div class="profile-stats-row">
+            <div><div class="ps-value" id="ps-scholars">—</div><div class="ps-label">Scholars Encoded</div></div>
+            <div><div class="ps-value" id="ps-academic">—</div><div class="ps-label">Academic Records Encoded</div></div>
+            <div><div class="ps-value" id="ps-stipend">—</div><div class="ps-label">Stipend Records Encoded</div></div>
+            <div><div class="ps-value" id="ps-age">—</div><div class="ps-label">Account Age</div></div>
+          </div>
+        </div>
+
+        <div class="tabs-row mt-24" id="profile-tabs">
+          <button class="tab-btn active" data-tab="details">Profile Details</button>
+          <button class="tab-btn" data-tab="security">Security</button>
+        </div>
+
+        <div class="card card-pad" id="tab-details">
+          <h3 style="font-size:15px; margin-bottom:18px;">Profile Details</h3>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">First Name <span class="required">*</span></label><input class="form-control" id="pd-first"></div>
+            <div class="form-group"><label class="form-label">Last Name <span class="required">*</span></label><input class="form-control" id="pd-last"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Email <span class="required">*</span></label><input type="email" class="form-control" id="pd-email"></div>
+            <div class="form-group"><label class="form-label">Contact Number</label><input class="form-control" id="pd-contact" placeholder="09XX XXX XXXX"></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Username</label><input class="form-control" id="pd-username" disabled></div>
+            <div class="form-group"><label class="form-label">Office / Station</label><input class="form-control" id="pd-office" disabled><div class="form-hint">Set by the Administrator.</div></div>
+          </div>
+          <div class="form-group" id="pd-pw-wrap" style="max-width:420px; display:none;"><label class="form-label">Current Password <span class="required">*</span></label><input type="password" class="form-control" id="pd-current" autocomplete="current-password"><div class="form-hint">Required because you are changing your sign-in email.</div></div>
+          <button class="btn btn-primary" onclick="saveProfile()"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+        </div>
+
+        <div class="card card-pad" id="tab-security" style="display:none;">
+          <h3 style="font-size:15px; margin-bottom:18px;">Change Password</h3>
+          <div class="form-group" style="max-width:420px;"><label class="form-label">Current Password</label><input type="password" class="form-control" id="sec-current" autocomplete="current-password"></div>
+          <div class="form-group" style="max-width:420px;"><label class="form-label">New Password</label><input type="password" class="form-control" id="sec-new" autocomplete="new-password"><div class="form-hint">At least 8 characters with an uppercase letter, a lowercase letter, a number and a symbol.</div></div>
+          <div class="form-group" style="max-width:420px;"><label class="form-label">Confirm New Password</label><input type="password" class="form-control" id="sec-confirm" autocomplete="new-password"></div>
+          <p class="inline-note" style="max-width:420px; margin-bottom:14px;">Saving signs you out on every other device or browser. You stay signed in here.</p>
+          <button class="btn btn-primary" onclick="changePassword()"><i class="fa-solid fa-key"></i> Change Password</button>
+        </div>
+        <div class="card card-pad mt-24" id="tab-security-2fa" style="display:none;">
+          <h3 style="font-size:15px; margin-bottom:8px;">Two-Step Verification</h3>
+          <div id="tfa-required" class="callout" style="display:none; margin-bottom:14px;"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><div>Administrator accounts on this system must use two-step verification. Set it up below to continue using IskoLens.</div></div>
+          <p class="text-sm text-muted" style="max-width:640px; margin-bottom:14px;">After your password, IskoLens also asks for a 6-digit code from an authenticator app on your phone (Google Authenticator, Microsoft Authenticator or similar). Someone who learns your password still cannot sign in.</p>
+          <div id="tfa-status" class="text-sm" style="margin-bottom:14px;"></div>
+          <div id="tfa-off">
+            <div class="form-group" style="max-width:420px;"><label class="form-label" for="tfa-password">Your password</label><input type="password" class="form-control" id="tfa-password" autocomplete="current-password"></div>
+            <button class="btn btn-primary" onclick="tfaSetup()"><i class="fa-solid fa-qrcode"></i> Set Up Two-Step Verification</button>
+          </div>
+          <div id="tfa-setup" style="display:none;">
+            <p class="text-sm" style="margin-bottom:10px;">1. In your authenticator app, add an account and scan this code. If you can't scan, type the key shown below it.</p>
+            <div id="tfa-qr" style="background:#fff; padding:10px; display:inline-block; border-radius:8px;"></div>
+            <p class="text-sm" style="margin:8px 0 14px;">Key: <code id="tfa-secret" style="user-select:all;"></code></p>
+            <p class="text-sm" style="margin-bottom:10px;">2. Enter the 6-digit code the app now shows.</p>
+            <div class="form-group" style="max-width:220px;"><label class="form-label" for="tfa-code">Code</label><input class="form-control" id="tfa-code" inputmode="numeric" maxlength="6" autocomplete="one-time-code"></div>
+            <button class="btn btn-primary" onclick="tfaEnable()"><i class="fa-solid fa-check"></i> Turn On</button>
+          </div>
+          <div id="tfa-codes" style="display:none; margin-top:14px;">
+            <div class="callout" style="margin-bottom:10px;"><i class="fa-solid fa-key" aria-hidden="true"></i><div><strong>Save these recovery codes now.</strong> Each one lets you sign in once if you lose your phone. They are shown only this time.</div></div>
+            <pre id="tfa-code-list" style="font-size:14px; line-height:1.8; padding:12px; border:1px solid var(--gray-200); border-radius:8px; max-width:320px;"></pre>
+          </div>
+          <div id="tfa-on" style="display:none;">
+            <div class="form-group" style="max-width:420px;"><label class="form-label" for="tfa-on-password">Your password</label><input type="password" class="form-control" id="tfa-on-password" autocomplete="current-password"></div>
+            <div class="form-group" style="max-width:220px;"><label class="form-label" for="tfa-on-code">Current code or a recovery code</label><input class="form-control" id="tfa-on-code" maxlength="20"></div>
+            <button class="btn btn-outline" onclick="tfaNewCodes()"><i class="fa-solid fa-rotate"></i> New Recovery Codes</button>
+            <button class="btn btn-danger-outline" id="tfa-disable-btn" onclick="tfaDisable()"><i class="fa-solid fa-power-off"></i> Turn Off</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== SETTINGS ===================== -->
+      <section id="section-settings" style="display:none;">
+        <div class="card card-pad settings-card">
+          <h3 style="font-size:15px;">Appearance</h3>
+          <div class="text-sm text-muted settings-card-desc">Choose a light or dark look, and make text and controls larger or smaller on this account.</div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Font Size</label><select class="form-control" id="set-font"></select></div>
+            <div class="form-group"><label class="form-label">Theme</label><select class="form-control" id="set-theme"></select></div>
+          </div>
+          <div class="settings-card-actions">
+            <button class="btn btn-primary" onclick="savePreferences('appearance')"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          </div>
+        </div>
+
+        <div class="card card-pad settings-card">
+          <h3 style="font-size:15px;">Preferences</h3>
+          <div class="text-sm text-muted settings-card-desc" style="margin-bottom:4px;">Defaults used across the system.</div>
+          <div class="pref-row">
+            <div><div style="font-weight:600; font-size:13.5px;">Default Municipality Filter</div><div class="text-sm text-muted">Applied when you open Scholar Records and the GeoMap</div></div>
+            <select class="form-control" style="max-width:200px;" id="set-muni"><option value="">All Municipalities</option></select>
+          </div>
+          <div class="pref-row">
+            <div><div style="font-weight:600; font-size:13.5px;">Default Report Export Format</div><div class="text-sm text-muted">Used by KPI reports once they are available</div></div>
+            <select class="form-control" style="max-width:200px;" id="set-export"></select>
+          </div>
+          <div class="pref-row">
+            <div><div style="font-weight:600; font-size:13.5px;">Email me academic alerts</div><div class="text-sm text-muted">When a scholar is below the GWA requirement for 2 semesters in a row. High Risk alerts will use this too once risk prediction is enabled.</div></div>
+            <label class="toggle-switch"><input type="checkbox" id="set-highrisk"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="pref-row" style="border-bottom:none;">
+            <div><div style="font-weight:600; font-size:13.5px;">Weekly summary digest</div><div class="text-sm text-muted">A weekly email with scholar counts, GWA encoding, pending reviews and accounts. <a class="link-action" href="#" onclick="event.preventDefault(); previewDigest()">Send me a preview now</a></div></div>
+            <label class="toggle-switch"><input type="checkbox" id="set-digest"><span class="toggle-slider"></span></label>
+          </div>
+          <div class="settings-card-actions" style="margin-top:14px;">
+            <button class="btn btn-primary" onclick="savePreferences('preferences')"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===================== GUIDES ===================== -->
+      <section id="section-guides" style="display:none;">
+        <div class="search-input-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input type="text" class="form-control" id="guide-search" placeholder="Search guides…">
+        </div>
+        <div class="guide-chips" id="guide-chips"></div>
+        <div id="guide-list"></div>
+        <div class="card card-pad guide-empty" id="guide-empty" style="display:none;">
+          <div style="font-weight:600;">No guides found</div>
+          <div class="text-sm text-muted mt-8">Try a different keyword.</div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+renderShell('profile');
+document.getElementById('profile-avatar').textContent = ISKOLENS_DATA.currentUser.initials;
+document.getElementById('profile-role-label').textContent = ISKOLENS_DATA.currentUser.roleLabel;
+
+let profileUser = null;
+function fillProfile(u) {
+  profileUser = u;
+  document.getElementById('pd-first').value = u.first_name;
+  document.getElementById('pd-last').value = u.last_name;
+  document.getElementById('pd-email').value = u.email;
+  document.getElementById('pd-contact').value = u.contact_number || '';
+  document.getElementById('pd-username').value = u.username;
+  document.getElementById('pd-office').value = u.office || '';
+  document.getElementById('pd-pw-wrap').style.display = 'none';
+  document.getElementById('pd-current').value = '';
+  document.querySelectorAll('.js-user-name').forEach(el => el.textContent = u.name);
+  document.getElementById('profile-avatar').textContent = u.initials;
+}
+
+async function loadProfile() {
+  try {
+    const data = await IskoAPI.get('/api/profile');
+    fillProfile(data.user);
+    document.getElementById('ps-scholars').textContent = data.stats.scholars_encoded;
+    document.getElementById('ps-academic').textContent = data.stats.academic_records;
+    document.getElementById('ps-stipend').textContent = data.stats.stipend_records;
+    const days = Math.floor((Date.now() - new Date(data.stats.member_since + 'Z')) / 86400000);
+    document.getElementById('ps-age').textContent = days < 31 ? `${days} day${days === 1 ? '' : 's'}` : days < 365 ? `${Math.floor(days / 30)} mo` : `${(days / 365).toFixed(1)} yrs`;
+    const opts = (await IskoAPI.lookups()).options;   // setting choices come from the server
+    IskoAPI.fillSelect('set-font', opts.font_sizes, null, '', 'label', 'value');
+    IskoAPI.fillSelect('set-theme', opts.themes, null, '', 'label', 'value');
+    IskoAPI.fillSelect('set-export', opts.export_formats, null, '', 'label', 'value');
+    const p = data.preferences;
+    document.getElementById('set-font').value = p.font_size;
+    document.getElementById('set-theme').value = p.theme || 'light';
+    document.getElementById('set-export').value = p.export_format;
+    document.getElementById('set-highrisk').checked = p.email_high_risk;
+    document.getElementById('set-digest').checked = p.weekly_digest;
+    const lk = await IskoAPI.lookups();
+    IskoAPI.fillSelect('set-muni', lk.municipalities, 'All Municipalities', p.default_municipality_id || '');
+  } catch (err) { IskoAPI.fail(err, 'Could not load your profile'); }
+}
+
+document.getElementById('pd-email').addEventListener('input', e => {
+  document.getElementById('pd-pw-wrap').style.display = profileUser && e.target.value.trim().toLowerCase() !== profileUser.email ? 'block' : 'none';
+});
+
+async function saveProfile() {
+  const map = { first_name: 'pd-first', last_name: 'pd-last', email: 'pd-email', contact_number: 'pd-contact', current_password: 'pd-current' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    const res = await IskoAPI.patch('/api/profile', { first_name: document.getElementById('pd-first').value,
+      last_name: document.getElementById('pd-last').value, email: document.getElementById('pd-email').value,
+      contact_number: document.getElementById('pd-contact').value, current_password: document.getElementById('pd-current').value });
+    fillProfile(res.user);
+    showToast('Profile updated', 'Your changes have been saved.');
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Profile not saved'); }
+}
+
+async function changePassword() {
+  const map = { current_password: 'sec-current', new_password: 'sec-new', confirm_password: 'sec-confirm' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    await IskoAPI.post('/api/profile/password', { current_password: document.getElementById('sec-current').value,
+      new_password: document.getElementById('sec-new').value, confirm_password: document.getElementById('sec-confirm').value });
+    Object.values(map).forEach(id => document.getElementById(id).value = '');
+    showToast('Password changed', 'Other devices were signed out.');
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Password not changed'); }
+}
+
+async function savePreferences(which) {
+  const body = which === 'appearance' ? { font_size: document.getElementById('set-font').value, theme: document.getElementById('set-theme').value } : {
+    default_municipality_id: document.getElementById('set-muni').value || null,
+    export_format: document.getElementById('set-export').value,
+    email_high_risk: document.getElementById('set-highrisk').checked,
+    weekly_digest: document.getElementById('set-digest').checked };
+  try {
+    const res = await IskoAPI.put('/api/profile/preferences', body);
+    if (which === 'appearance') {
+      try { localStorage.setItem('iskolens_font_size', res.preferences.font_size); localStorage.setItem('iskolens_theme', res.preferences.theme); } catch (e) {}
+      showToast('Saved', 'Appearance updated. Reloading to apply it.');
+      setTimeout(() => location.reload(), 700);
+    } else showToast('Saved', 'Preferences updated.');
+  } catch (err) { IskoAPI.fail(err, 'Settings not saved'); }
+}
+async function previewDigest() {
+  try {
+    const res = await IskoAPI.post('/api/profile/digest-preview');
+    showToast(res.sent ? 'Preview sent' : 'Preview saved', res.message, res.sent ? 'success' : 'warning');
+  } catch (err) { IskoAPI.fail(err, 'Preview not sent'); }
+}
+/* ---------- two-step verification ---------- */
+let tfaInfo = null;
+async function loadTwoFactor() {
+  try { tfaInfo = (await IskoAPI.get('/api/profile')).two_factor; } catch (e) { return; }
+  const on = tfaInfo.enabled;
+  document.getElementById('tfa-status').innerHTML = on
+    ? `<span class="badge badge-green">On</span> &nbsp;${tfaInfo.recovery_codes_left} recovery code(s) left.`
+    : '<span class="badge badge-gray">Off</span>';
+  document.getElementById('tfa-off').style.display = on ? 'none' : '';
+  document.getElementById('tfa-on').style.display = on ? '' : 'none';
+  document.getElementById('tfa-required').style.display = tfaInfo.required && !on ? 'flex' : 'none';
+  document.getElementById('tfa-disable-btn').style.display = tfaInfo.required ? 'none' : '';
+}
+async function tfaSetup() {
+  const map = { password: 'tfa-password' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    const r = await IskoAPI.post('/api/profile/2fa/setup', { password: document.getElementById('tfa-password').value });
+    document.getElementById('tfa-qr').innerHTML = r.qr_svg;
+    document.getElementById('tfa-secret').textContent = r.secret.replace(/(.{4})/g, '$1 ').trim();
+    document.getElementById('tfa-off').style.display = 'none';
+    document.getElementById('tfa-setup').style.display = '';
+    document.getElementById('tfa-code').focus();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Setup not started'); }
+}
+async function tfaEnable() {
+  const map = { code: 'tfa-code' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    const r = await IskoAPI.post('/api/profile/2fa/enable', { code: document.getElementById('tfa-code').value.trim() });
+    document.getElementById('tfa-setup').style.display = 'none';
+    showCodes(r.recovery_codes);
+    showToast('Two-step verification is on', 'From now on, sign-in also asks for a code from your app.');
+    loadTwoFactor();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Not turned on'); }
+}
+function showCodes(codes) {
+  document.getElementById('tfa-code-list').textContent = codes.join('\n');
+  document.getElementById('tfa-codes').style.display = '';
+}
+async function tfaNewCodes() {
+  const map = { password: 'tfa-on-password', code: 'tfa-on-code' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    const r = await IskoAPI.post('/api/profile/2fa/recovery-codes', { password: document.getElementById('tfa-on-password').value, code: document.getElementById('tfa-on-code').value.trim() });
+    showCodes(r.recovery_codes); showToast('New recovery codes', 'Your old recovery codes no longer work.'); loadTwoFactor();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'No new codes'); }
+}
+async function tfaDisable() {
+  const map = { password: 'tfa-on-password', code: 'tfa-on-code' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    await IskoAPI.post('/api/profile/2fa/disable', { password: document.getElementById('tfa-on-password').value, code: document.getElementById('tfa-on-code').value.trim() });
+    document.getElementById('tfa-codes').style.display = 'none';
+    showToast('Two-step verification is off', 'Sign-in now needs only your password.', 'warning'); loadTwoFactor();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Not turned off'); }
+}
+loadTwoFactor();
+loadProfile();
+if (new URLSearchParams(location.search).get('tab') === 'security') setTimeout(() => { const b = document.querySelector('[data-tab=security]'); if (b) b.click(); }, 300);
+
+// ---- Profile Details / Security sub-tabs (unchanged) ----
+document.querySelectorAll('#profile-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#profile-tabs .tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-details').style.display = btn.dataset.tab === 'details' ? 'block' : 'none';
+    document.getElementById('tab-security').style.display = btn.dataset.tab === 'security' ? 'block' : 'none';
+    document.getElementById('tab-security-2fa').style.display = btn.dataset.tab === 'security' ? 'block' : 'none';
+  });
+});
+
+// ---- Main tabs: My Profile / Settings / Guides ----
+const MAIN_TABS = { profile: 'My Profile', settings: 'Settings', guides: 'Guides' };
+
+// Sidebar has separate "Settings" and "My Profile" items that both point at
+// this page, so highlight whichever one matches the open tab.
+function setSidebarActive(tab) {
+  document.querySelectorAll('.sidebar .nav-item').forEach(li => {
+    const href = li.querySelector('.nav-link').getAttribute('href');
+    const isSettingsLink = href === 'profile.html?tab=settings';
+    const isProfileLink = href === 'profile.html';
+    if (!isSettingsLink && !isProfileLink) return;
+    const on = tab === 'settings' ? isSettingsLink : isProfileLink;
+    li.classList.toggle('active', on);
+    li.dataset.activeItem = on ? 'true' : 'false';
+  });
+}
+
+function showMainTab(tab) {
+  if (!MAIN_TABS[tab]) tab = 'profile';
+  document.querySelectorAll('#main-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.main === tab));
+  Object.keys(MAIN_TABS).forEach(t => {
+    document.getElementById('section-' + t).style.display = t === tab ? 'block' : 'none';
+  });
+  document.getElementById('page-breadcrumb').innerHTML = tab === 'profile'
+    ? '<a href="dashboard.html">Home</a> &gt; My Profile'
+    : `<a href="dashboard.html">Home</a> &gt; <a href="profile.html">My Profile</a> &gt; ${MAIN_TABS[tab]}`;
+  history.replaceState(null, '', tab === 'profile' ? 'profile.html' : 'profile.html?tab=' + tab);
+  setSidebarActive(tab);
+}
+
+document.querySelectorAll('#main-tabs .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => showMainTab(btn.dataset.main));
+});
+
+// Clicking "Settings" / "My Profile" in the sidebar or profile menu while
+// already on this page just switches tabs instead of reloading.
+document.addEventListener('click', e => {
+  const a = e.target.closest('a[href="profile.html?tab=settings"], a[href="profile.html?tab=guides"], .sidebar a.nav-link[href="profile.html"], a.profile-menu-item[href="profile.html"]');
+  if (!a) return;
+  e.preventDefault();
+  const href = a.getAttribute('href');
+  showMainTab(href.includes('tab=settings') ? 'settings' : href.includes('tab=guides') ? 'guides' : 'profile');
+  const menu = document.getElementById('profile-menu');
+  if (menu) menu.classList.remove('open');
+  window.scrollTo({ top: 0 });
+});
+
+// ---- Guides content ----
+// roles: which accounts see the guide. Officers see day-to-day scholar work;
+// Administrators also see approval, reporting and system guides.
+const GUIDES = [
+  { id: 'scholar-records', title: 'Scholar Records', icon: 'fa-user-graduate', roles: ['officer', 'admin'], steps: [
+    'Open Scholar Records > View All Scholars to see every scholar in the province.',
+    'Use the search box to find a scholar by name, ID, school, HEI or municipality, and narrow the list with the Municipality and Academic Standing filters.',
+    'Use the status tabs (Active, Graduated, Terminated, and so on) to switch between groups of scholars.',
+    'Click a scholar to open their profile: Personal Information, Academic Performance, Stipend Disbursements, and Graduation Record.',
+    'Administrators can click "Export" to download the current list as CSV or Excel.'
+  ]},
+  { id: 'encode', title: 'Encoding Scholars', icon: 'fa-user-plus', roles: ['officer', 'admin'], steps: [
+    'Go to Scholar Records > Encode Records.',
+    'Fill in Personal Information, then click "Next".',
+    'Complete Scholarship Details and Higher Education Information, clicking "Next" after each step.',
+    'On Review & Save Record, check every field, then click "Save Scholar Record".',
+    'To add many scholars at once, open Scholar Records, click "Import" > New scholars, download the template, fill it in, and upload it. IskoLens checks every row and shows the errors before anything is saved.'
+  ]},
+  { id: 'bulk-records', title: 'Importing GWAs and Stipends', icon: 'fa-file-import', roles: ['officer', 'admin'], steps: [
+    'Open Scholar Records and click "Import", then choose GWA records or Stipend records.',
+    'Download the template. Each row needs the Scholar ID exactly as shown in IskoLens (for example SCH-2025-001).',
+    'For GWAs, fill in Academic Year, Semester and GWA; Year Level and Date Recorded are optional. For stipends, fill in Period, Amount and Status, plus Date Released for Released and Remarks for Inconsistent.',
+    'Upload the file and click "Upload & Validate". Rows with problems (unknown Scholar ID, a term or period the scholar already has, a bad GWA) are listed with the row number and are skipped.',
+    'Click Save to add the valid rows all at once. Scholars who end up below the GWA requirement for 2 semesters in a row are flagged to the officers in one notification.'
+  ]},
+  { id: 'corrections', title: 'Correcting Records', icon: 'fa-pen-to-square', roles: ['admin'], steps: [
+    'Open the scholar\'s profile and go to Academic Performance or Stipend Disbursements.',
+    'Click "Correct" on a GWA row to fix the term, GWA, year level or date. The new standing is previewed as you type.',
+    'Click "Delete" to remove a record entered twice or for the wrong scholar.',
+    'Both ask for a reason. The standing is recalculated, and the old values and your reason are kept in the audit log.',
+    'Officers can still edit stipend records; only Administrators can correct or delete GWAs and delete stipends.'
+  ]},
+  { id: 'documents', title: 'Documents and Printing', icon: 'fa-paperclip', roles: ['officer', 'admin'], steps: [
+    'Open the scholar\'s profile and go to the Documents tab.',
+    'Click "Upload Document", choose the type (grade report, certificate of registration, termination evidence, appeal document or other), and pick a PDF, JPG or PNG up to 10 MB.',
+    'Click a file name to open it. Every opening is recorded in the audit log. Administrators can remove a document, with a reason.',
+    'Click "Print Record" at the top of the profile for a one-page PDF of the scholar\'s details, GWAs, stipends and graduation record. It is marked confidential.'
+  ]},
+  { id: 'interventions', title: 'Interventions', icon: 'fa-clipboard-list', roles: ['officer', 'admin'], steps: [
+    'Open Prescriptive > Intervention Recommendation to see at-risk scholars with their findings and recommended actions.',
+    'Click "Claim This Case" on a scholar you will handle, so other officers know it is in progress.',
+    'Carry out one of the recommended actions (counseling, welfare check, advisory email, and so on).',
+    'Click "Mark Addressed", choose the action you took, and write what happened in the notes.',
+    'Use "View My Update" or "View Full Update" to review what was done on a case later.'
+  ]},
+  { id: 'recommend-termination', title: 'Recommending Termination', icon: 'fa-triangle-exclamation', roles: ['officer'], steps: [
+    'Open the scholar\'s profile. The "Eligible for Termination Recommendation" notice shows for Active scholars whose latest GWA is below the requirement for their year level.',
+    'Try interventions first. Recommend termination only when they have not resolved the issue.',
+    'Click "Recommend for Termination", pick the grounds, write your notes, and set a proposed effective date.',
+    'Submit. The scholar\'s status changes to "Pending Termination Review" until an Administrator decides.',
+    'You can attach supporting evidence (counseling records, the HEI grade report) in the same form; it is saved under the scholar\'s Documents.',
+    'If the Administrator returns it for more information, update your notes and submit again.',
+    'Filed it by mistake? While it is still pending, click "Withdraw" on the request and give the reason. The scholar goes back to Active.'
+  ]},
+  { id: 'approve-termination', title: 'Reviewing Termination Requests', icon: 'fa-gavel', roles: ['admin'], steps: [
+    'Open the Dashboard and check Pending Approvals for termination requests.',
+    'Click a request to open the scholar\'s profile and read the grounds, notes, and proposed effective date.',
+    'Click "Return for More Info" if the recommendation needs more detail from the officer.',
+    'Click "Approve Termination" to finalize it. The scholar becomes "Terminated".',
+    'Once terminated, Academic Performance, Stipend Disbursements, and Graduation Record are locked, and the approval stays on the record.',
+    'If a termination is later reversed (for example after an approved appeal), open the profile and click "Reinstate Scholar". Write the basis, such as the appeal decision and its date. The scholar becomes Active again and the original approval stays on file, marked as reversed.'
+  ]},
+  { id: 'analytics', title: 'Analytics', icon: 'fa-chart-line', roles: ['officer', 'admin'], steps: [
+    'Descriptive shows what is happening: demographics, acceptance rates, HEI distribution, stipends, and graduation/termination counts.',
+    'Diagnostic explains why: root causes of termination and rates by school and municipality.',
+    'Predictive shows each scholar\'s termination risk (Low, Moderate, High) and forecasts for graduation and applicants.',
+    'Prescriptive recommends what to do: interventions, school caravan planning, and the municipal priority map.',
+    'Use the sidebar sub-links to jump straight to a section of each page.'
+  ]},
+  { id: 'geomap', title: 'DOST GeoMap', icon: 'fa-map-location-dot', roles: ['officer', 'admin'], steps: [
+    'Open DOST GeoMap to see how scholars are distributed across the 11 municipalities of Davao Oriental.',
+    'Choose what the map shows (total, active, graduated, terminated, or below the GWA requirement). Taller, darker municipalities have more scholars.',
+    'Hover a municipality for a quick look, or click it (or its name in the list) for full detail.',
+    'Drag to pan, scroll or use + and - to zoom, and switch between the tilted 3D view and the flat view.'
+  ]},
+  { id: 'kpi', title: 'KPI Reports', icon: 'fa-chart-column', roles: ['admin'], steps: [
+    'Open KPI Reports > Generate Reports.',
+    'Set the scholarship cycle range, the program, the export format, and the sections to include.',
+    'Click "Generate & Download".',
+    'Open View Generated Reports to see past reports, then "Download PDF" or "Print".'
+  ]},
+  { id: 'users', title: 'User Management', icon: 'fa-users-gear', roles: ['admin'], steps: [
+    'Open User Management to see every account.',
+    'Click "Approve" on new sign-ups waiting for access. Until then they stay on the Account Pending Approval screen.',
+    'Click "Create New User" to add a staff account yourself. The user gets an email link to set their own password.',
+    'Click "View" to see an account, "Edit" to change role or status, or "Deactivate" to block access.',
+    'Accounts lock after 5 failed sign-in attempts. Confirm with the user, then click "Unlock" on the Locked tab.'
+  ]},
+  { id: 'system', title: 'Audit Logs', icon: 'fa-server', roles: ['admin'], steps: [
+    'Open Audit Logs to see who did what and when, filtered by type, keyword or date.',
+    'Click "Verify integrity" to confirm that no log entry has been changed or deleted.',
+    'Click "Export CSV" to download the log. Deactivated scholar records can be restored from their log entry.'
+  ]},
+  { id: 'reference', title: 'Reference Lists', icon: 'fa-list-check', roles: ['admin'], steps: [
+    'Open Reference Lists to manage the secondary schools, HEIs, scholarship programs and cycles used in the dropdowns.',
+    'Click "Add" to add an entry. Schools also need their municipality.',
+    'Click "Deactivate" to stop an entry from appearing for new records. Scholars who already use it keep it.',
+    'The current and next academic-year cycles are added automatically every June. Add a future cycle yourself if you need it earlier.'
+  ]},
+  { id: 'backups', title: 'Backups and Restore', icon: 'fa-box-archive', roles: ['admin'], steps: [
+    'Open Data Protection > Backups. Click "Back Up Now" for an immediate encrypted backup.',
+    'Set up the daily scheduled backup once, following the README. The latest 30 scheduled backups are kept.',
+    'Click "Verify" to check that a backup can be opened, and "Download" to copy it to another drive. Keep the BACKUP_KEY safe: a backup cannot be restored without it.',
+    'To restore, click "Restore", type RESTORE and your password. \'s safety copy of the current data is made first, then everyone is signed out.'
+  ]},
+  { id: 'sessions', title: 'Active Sessions', icon: 'fa-user-clock', roles: ['admin'], steps: [
+    'Open Data Protection > Active Sessions to see who is signed in, from which device and address, and when they were last active.',
+    'Click "Sign out" to end one session, for example a computer left signed in, or "All devices" for a lost phone or a staff member who left.',
+    'Recently Ended shows how each session finished: signed out, timed out after 30 minutes, or ended by an Administrator.'
+  ]},
+  { id: 'privacy', title: 'Data Privacy Requests', icon: 'fa-user-shield', roles: ['admin'], steps: [
+    'The Privacy Notice (sidebar and sign-in page) tells scholars and staff what is collected, why, for how long, and their rights.',
+    'For an access request, open the scholar\'s profile, click "More" > Export personal data, and give the file only to the scholar through a secure channel.',
+    'For a correction request, edit the record as usual; the change and its reason are in the audit log.',
+    'Data Protection > Retention Review lists graduated and terminated scholars whose retention period has been reached, for the office\'s review under its records retention policy.'
+  ]},
+  { id: 'appearance', title: 'Theme and Text Size', icon: 'fa-circle-half-stroke', roles: ['officer', 'admin'], steps: [
+    'Open Settings > Appearance.',
+    'Choose Light, Dark, or Match my device (follows your computer\'s light or dark setting).',
+    'Choose Small, Medium or Large text, then click "Save Changes". The page reloads with your choice, and it follows your account on other computers.'
+  ]}
+];
+
+const myRole = ISKOLENS_DATA.currentUser.role;
+const myGuides = GUIDES.filter(g => g.roles.includes(myRole));
+
+function renderGuides() {
+  const q = document.getElementById('guide-search').value.trim().toLowerCase();
+  const visible = myGuides.filter(g => !q || g.title.toLowerCase().includes(q) || g.steps.some(s => s.toLowerCase().includes(q)));
+
+  document.getElementById('guide-chips').innerHTML = visible.map(g =>
+    `<button class="guide-chip" onclick="jumpToGuide('${g.id}')">${g.title}</button>`).join('');
+
+  document.getElementById('guide-list').innerHTML = visible.map(g => `
+    <div class="card card-pad guide-card" id="guide-${g.id}">
+      <div class="guide-card-head">
+        <div class="guide-icon"><i class="fa-solid ${g.icon}"></i></div>
+        <h3>${g.title}</h3>
+      </div>
+      <ol class="guide-steps">
+        ${g.steps.map((s, i) => `<li><span class="guide-num">${i + 1}</span><span>${s}</span></li>`).join('')}
+      </ol>
+    </div>`).join('');
+
+  document.getElementById('guide-empty').style.display = visible.length ? 'none' : 'block';
+}
+
+function jumpToGuide(id) {
+  const el = document.getElementById('guide-' + id);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+document.getElementById('guide-search').addEventListener('input', renderGuides);
+renderGuides();
+
+showMainTab(new URLSearchParams(location.search).get('tab') || 'profile');
+</script>
+</body>
+</html>

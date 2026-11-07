@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Protection · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Data Protection</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Data Protection</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="refreshTab()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+
+    <main class="page-body" id="main">
+      <p class="page-lead" style="margin-bottom:20px;">Backups, signed-in sessions and the data retention review, in line with the Data Privacy Act of 2012 (RA 10173).</p>
+
+      <div class="tabs-row" id="dp-tabs" role="tablist">
+        <button class="tab-btn active" role="tab" aria-selected="true" data-tab="backups">Backups</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="sessions">Active Sessions</button>
+        <button class="tab-btn" role="tab" aria-selected="false" data-tab="retention">Retention Review</button>
+      </div>
+
+      <!-- Backups -->
+      <section id="tab-backups" aria-labelledby="h-backups">
+        <h2 id="h-backups" class="visually-hidden">Backups</h2>
+        <div class="stat-grid" id="backup-stats"></div>
+        <div class="card card-pad mt-24">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+            <h3 style="font-size:15px;">Backup History</h3>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <label class="btn btn-outline" for="upload-backup" style="cursor:pointer;"><i class="fa-solid fa-file-import" aria-hidden="true"></i> Upload backup file</label>
+              <input type="file" id="upload-backup" accept=".iskb" class="visually-hidden">
+              <button class="btn btn-primary" id="btn-backup" onclick="runBackup()"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Back Up Now</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Backups, newest first</caption>
+              <thead><tr><th scope="col">Created</th><th scope="col">Type</th><th scope="col">Contents</th><th scope="col">Size</th><th scope="col">By</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+              <tbody id="backup-body"><tr class="loading-row"><td colspan="6">Loading…</td></tr></tbody>
+            </table>
+          </div>
+          <p class="inline-note" id="backup-note" style="margin-top:12px;"></p>
+        </div>
+      </section>
+
+      <!-- Sessions -->
+      <section id="tab-sessions" style="display:none;" aria-labelledby="h-sessions">
+        <h2 id="h-sessions" class="visually-hidden">Active sessions</h2>
+        <div class="stat-grid" id="session-stats"></div>
+        <div class="card card-pad mt-24">
+          <h3 style="font-size:15px; margin-bottom:14px;">Signed In Now</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Active sessions</caption>
+              <thead><tr><th scope="col">User</th><th scope="col">Device</th><th scope="col">Address</th><th scope="col">Signed in</th><th scope="col">Last activity</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+              <tbody id="session-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card card-pad mt-24">
+          <h3 style="font-size:15px; margin-bottom:14px;">Recently Ended</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Recently ended sessions</caption>
+              <thead><tr><th scope="col">User</th><th scope="col">Ended</th><th scope="col">How</th><th scope="col">Device</th></tr></thead>
+              <tbody id="recent-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Retention -->
+      <section id="tab-retention" style="display:none;" aria-labelledby="h-retention">
+        <h2 id="h-retention" class="visually-hidden">Retention review</h2>
+        <div class="card card-pad">
+          <p class="text-sm" id="retention-rule"></p>
+        </div>
+        <div class="card card-pad mt-24">
+          <h3 style="font-size:15px; margin-bottom:14px;">Retention Period Reached</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Scholars past the retention period</caption>
+              <thead><tr><th scope="col">Scholar ID</th><th scope="col">Status</th><th scope="col">Left the program</th><th scope="col">Due since</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+              <tbody id="due-body"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card card-pad mt-24">
+          <h3 style="font-size:15px; margin-bottom:14px;">Retention Period Coming Up</h3>
+          <div class="table-wrap">
+            <table class="data-table">
+              <caption class="visually-hidden">Scholars approaching the retention period</caption>
+              <thead><tr><th scope="col">Scholar ID</th><th scope="col">Status</th><th scope="col">Left the program</th><th scope="col">Due on</th></tr></thead>
+              <tbody id="upcoming-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="restore-modal">
+  <div class="modal-box" style="max-width:520px;" role="dialog" aria-modal="true" aria-labelledby="restore-title">
+    <div class="modal-header"><span id="restore-title">Restore from Backup</span><button class="modal-close" onclick="closeModal('restore-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body">
+      <p class="text-sm" style="margin-bottom:10px;">All current data will be <strong>replaced</strong> with the backup from <strong id="restore-when"></strong>. Anything added after that time will be gone from the live system.</p>
+      <p class="text-sm" style="margin-bottom:14px;">A safety backup of the current data is made first, so this restore can itself be undone. Everyone, including you, will be signed out.</p>
+      <div class="form-group"><label class="form-label" for="rs-confirm">Type RESTORE to confirm <span class="required">*</span></label><input class="form-control" id="rs-confirm" autocomplete="off"></div>
+      <div class="form-group"><label class="form-label" for="rs-password">Your password <span class="required">*</span></label><input class="form-control" type="password" id="rs-password" autocomplete="current-password"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('restore-modal')">Cancel</button><button class="btn btn-danger" id="rs-submit" onclick="confirmRestore()">Restore</button></div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+renderShell('dataprotection');
+let tab = new URLSearchParams(location.search).get('tab') || 'backups';
+let restoring = null;
+const KIND_LABEL = { manual: 'Manual', scheduled: 'Scheduled', 'pre-restore': 'Safety copy', uploaded: 'Uploaded' };
+const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+
+function showTab(t) {
+  tab = t;
+  document.querySelectorAll('#dp-tabs .tab-btn').forEach(b => { const on = b.dataset.tab === t; b.classList.toggle('active', on); b.setAttribute('aria-selected', on); });
+  ['backups', 'sessions', 'retention'].forEach(x => document.getElementById('tab-' + x).style.display = x === t ? '' : 'none');
+  refreshTab();
+}
+function refreshTab() { ({ backups: loadBackups, sessions: loadSessions, retention: loadRetention })[tab](); }
+
+/* ---------- Backups ---------- */
+async function loadBackups() {
+  try {
+    const d = await IskoAPI.get('/api/admin/backups');
+    const last = d.backups[0];
+    const ageH = last ? (Date.now() - new Date(last.created_at)) / 3600000 : null;
+    document.getElementById('backup-stats').innerHTML = `
+      <div class="stat-card ${ageH === null || ageH > 26 ? 'accent-red' : 'accent-green'}"><div class="stat-card-top"><div><div class="stat-value">${last ? esc(IskoFmt.relative(last.created_at.replace('Z', ''))) : 'Never'}</div><div class="stat-label">Last backup</div></div><div class="stat-icon ${ageH === null || ageH > 26 ? 'red' : 'green'}"><i class="fa-solid fa-clock-rotate-left"></i></div></div><div class="stat-delta ${ageH === null || ageH > 26 ? 'down' : 'flat'}">${ageH === null ? 'Make the first backup now' : ageH > 26 ? 'Older than a day: check the scheduled task' : 'Up to date'}</div></div>
+      <div class="stat-card"><div class="stat-card-top"><div><div class="stat-value">${d.backups.length}</div><div class="stat-label">Backups on this server</div></div><div class="stat-icon"><i class="fa-solid fa-box-archive"></i></div></div><div class="stat-delta flat">Keeps the latest ${d.keep_scheduled} scheduled ones</div></div>
+      <div class="stat-card ${d.using_separate_key ? 'accent-green' : 'accent-amber'}"><div class="stat-card-top"><div><div class="stat-value">${d.using_separate_key ? 'Separate key' : 'Server key'}</div><div class="stat-label">Encryption</div></div><div class="stat-icon ${d.using_separate_key ? 'green' : 'amber'}"><i class="fa-solid fa-lock"></i></div></div><div class="stat-delta flat">${d.using_separate_key ? 'BACKUP_KEY is set' : 'Set BACKUP_KEY in .env (see README)'}</div></div>`;
+    document.getElementById('backup-body').innerHTML = d.backups.length ? d.backups.map(b => `
+      <tr>
+        <td class="cell-primary">${esc(IskoFmt.dateTime(b.created_at.replace('Z', '')))}${b.note ? `<div class="cell-sub">${esc(b.note)}</div>` : ''}</td>
+        <td><span class="badge ${b.kind === 'pre-restore' ? 'badge-amber' : b.kind === 'scheduled' ? 'badge-blue' : 'badge-gray'}">${esc(KIND_LABEL[b.kind] || b.kind)}</span></td>
+        <td class="text-sm">${b.scholars} scholars, ${b.users} users${b.document_files ? `, ${b.document_files} documents` : ''}</td>
+        <td class="text-sm">${kb(b.size_bytes)}</td>
+        <td class="text-sm">${esc(b.created_by)}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-outline btn-sm" onclick="verifyBackup('${esc(b.name)}')">Verify</button>
+          <a class="btn btn-outline btn-sm" href="/api/admin/backups/${encodeURIComponent(b.name)}/download">Download</a>
+          <button class="btn btn-danger-outline btn-sm" onclick="openRestore('${esc(b.name)}', '${esc(b.created_at)}')">Restore</button>
+        </td>
+      </tr>`).join('') : '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-box-archive"></i></div><h3>No backups yet</h3><p>Click Back Up Now, then set up the daily scheduled backup described in the README.</p></div></td></tr>';
+    document.getElementById('backup-note').textContent = `Backups are saved in ${d.folder}. Copy them regularly to another drive or computer, since a backup on the same disk does not survive a disk failure. Restoring needs the same BACKUP_KEY (or SECRET_KEY) that made the backup.`;
+  } catch (err) { IskoAPI.fail(err, 'Could not load backups'); }
+}
+async function runBackup() {
+  const btn = document.getElementById('btn-backup');
+  btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Backing up…';
+  try {
+    const r = await IskoAPI.post('/api/admin/backups', {});
+    showToast('Backup created', `${r.backup.scholars} scholars, ${kb(r.backup.size_bytes)}, encrypted.`);
+    loadBackups();
+  } catch (err) { IskoAPI.fail(err, 'Backup failed'); }
+  finally { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-floppy-disk" aria-hidden="true"></i> Back Up Now'; }
+}
+async function verifyBackup(name) {
+  try {
+    const r = await IskoAPI.post(`/api/admin/backups/${encodeURIComponent(name)}/verify`);
+    showToast('Backup is readable', `Decrypted and checked: ${r.backup.scholars} scholars, ${Object.keys(r.backup.row_counts).length} tables.`);
+  } catch (err) { IskoAPI.fail(err, 'Backup problem'); }
+}
+function openRestore(name, when) {
+  restoring = name;
+  document.getElementById('restore-when').textContent = IskoFmt.dateTime(when.replace('Z', ''));
+  document.getElementById('rs-confirm').value = '';
+  document.getElementById('rs-password').value = '';
+  IskoAPI.clearFieldErrors({ confirm: 'rs-confirm', password: 'rs-password' });
+  openModal('restore-modal');
+}
+async function confirmRestore() {
+  const map = { confirm: 'rs-confirm', password: 'rs-password' };
+  IskoAPI.clearFieldErrors(map);
+  const btn = document.getElementById('rs-submit');
+  btn.disabled = true; btn.textContent = 'Restoring…';
+  try {
+    await IskoAPI.post(`/api/admin/backups/${encodeURIComponent(restoring)}/restore`,
+      { confirm: document.getElementById('rs-confirm').value, password: document.getElementById('rs-password').value });
+    closeModal('restore-modal');
+    showToast('Data restored', 'Everyone has been signed out. Sign in again to continue.');
+    setTimeout(() => { location.href = 'login.html'; }, 2200);
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Not restored'); btn.disabled = false; btn.textContent = 'Restore'; }
+}
+document.getElementById('upload-backup').addEventListener('change', async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  try {
+    const r = await IskoAPI.request('POST', '/api/admin/backups/upload', fd);
+    showToast('Backup added', `${f.name} was checked and added to the list (${r.backup.scholars} scholars).`);
+    loadBackups();
+  } catch (err) { IskoAPI.fail(err, 'Backup file not accepted'); }
+  e.target.value = '';
+});
+
+/* ---------- Sessions ---------- */
+async function loadSessions() {
+  try {
+    const d = await IskoAPI.get('/api/admin/sessions');
+    document.getElementById('session-stats').innerHTML = `
+      <div class="stat-card accent-green"><div class="stat-card-top"><div><div class="stat-value">${d.users_online}</div><div class="stat-label">Users signed in</div></div><div class="stat-icon green"><i class="fa-solid fa-user-check"></i></div></div><div class="stat-delta flat">${d.sessions.length} active session${d.sessions.length === 1 ? '' : 's'}</div></div>
+      <div class="stat-card"><div class="stat-card-top"><div><div class="stat-value">${d.supported}</div><div class="stat-label">Supported at once</div></div><div class="stat-icon"><i class="fa-solid fa-users"></i></div></div><div class="stat-delta flat">Per the system scope</div></div>
+      <div class="stat-card accent-amber"><div class="stat-card-top"><div><div class="stat-value">${d.idle_minutes} min</div><div class="stat-label">Idle sign-out</div></div><div class="stat-icon amber"><i class="fa-solid fa-hourglass-half"></i></div></div><div class="stat-delta flat">Sessions end after this much inactivity</div></div>`;
+    document.getElementById('session-body').innerHTML = d.sessions.length ? d.sessions.map(x => `
+      <tr>
+        <td class="cell-primary">${esc(x.name)}${x.is_current ? ' <span class="badge badge-blue">This session</span>' : ''}<div class="cell-sub">${esc(x.username)} · ${esc(x.role_label)}</div></td>
+        <td class="text-sm">${esc(x.device)}</td>
+        <td class="text-sm">${esc(x.ip_address || '—')}</td>
+        <td class="text-sm">${esc(IskoFmt.dateTime(x.started_at))}</td>
+        <td class="text-sm">${esc(IskoFmt.relative(x.last_seen_at))}</td>
+        <td style="white-space:nowrap;">${x.is_current ? '' : `<button class="btn btn-danger-outline btn-sm" onclick="endSession('${x.id}', '${esc(x.name)}')">Sign out</button>
+          <button class="btn btn-outline btn-sm" onclick="signOutEverywhere(${x.user_id}, '${esc(x.name)}')">All devices</button>`}</td>
+      </tr>`).join('') : '<tr><td colspan="6" class="text-sm text-muted">Nobody is signed in.</td></tr>';
+    document.getElementById('recent-body').innerHTML = d.recent.length ? d.recent.map(x => `
+      <tr><td>${esc(x.name)}</td><td class="text-sm">${esc(IskoFmt.dateTime(x.ended_at))}</td><td class="text-sm">${esc(x.reason)}</td><td class="text-sm">${esc(x.device)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="text-sm text-muted">No ended sessions yet.</td></tr>';
+  } catch (err) { IskoAPI.fail(err, 'Could not load sessions'); }
+}
+function endSession(id, name) {
+  confirmAction(`Sign ${name} out of this session now? They will need to sign in again. Use this for a lost device or a computer left signed in.`, async () => {
+    try { await IskoAPI.post(`/api/admin/sessions/${id}/revoke`); showToast('Session ended', `${name} was signed out.`); loadSessions(); }
+    catch (err) { IskoAPI.fail(err); }
+  });
+}
+function signOutEverywhere(userId, name) {
+  confirmAction(`Sign ${name} out on every device?`, async () => {
+    try { await IskoAPI.post(`/api/admin/users/${userId}/sign-out-everywhere`); showToast('Signed out everywhere', name); loadSessions(); }
+    catch (err) { IskoAPI.fail(err); }
+  });
+}
+
+/* ---------- Retention ---------- */
+async function loadRetention() {
+  try {
+    const d = await IskoAPI.get('/api/admin/privacy/retention');
+    document.getElementById('retention-rule').innerHTML = `<strong>Retention rule:</strong> scholar records are kept and disposed of according to the records retention policy of DOST Davao Oriental as data controller. This review lists graduated and terminated scholars whose retention period has been reached (currently ${d.retention_years} years after leaving the program, set with <code>RETENTION_YEARS</code> in <code>.env</code> to match the office's policy), so the office can decide on their records. Data requests go to ${esc(d.dpo.name)} (${esc(d.dpo.email)}).`;
+    const row = (r, action) => `<tr><td class="cell-primary">${esc(r.code)}</td><td>${esc(r.status)}</td><td class="text-sm">${esc(IskoFmt.date(r.left_on))}</td><td class="text-sm">${esc(IskoFmt.date(r.due_on))}</td>${action ? `<td><a class="btn btn-outline btn-sm" href="scholar-profile.html?id=${encodeURIComponent(r.code)}">Open record</a></td>` : ''}</tr>`;
+    document.getElementById('due-body').innerHTML = d.due.length ? d.due.map(r => row(r, true)).join('') : '<tr><td colspan="5" class="text-sm text-muted">No records are past the retention period.</td></tr>';
+    document.getElementById('upcoming-body').innerHTML = d.upcoming.length ? d.upcoming.map(r => row(r, false)).join('') : '<tr><td colspan="4" class="text-sm text-muted">None yet. Scholars appear here after they graduate or are terminated.</td></tr>';
+  } catch (err) { IskoAPI.fail(err, 'Could not load the retention review'); }
+}
+
+document.querySelectorAll('#dp-tabs .tab-btn').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+showTab(tab);
+</script>
+</body>
+</html>

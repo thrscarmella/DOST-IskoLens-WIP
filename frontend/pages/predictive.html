@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predictive Analytics · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Predictive Analytics</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Predictive Analytics</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead">Risk of termination per active scholar and forecasts for the next cycle, from the Random Forest model and the forecasting models in the Python analytics service.</p>
+      <div class="stat-grid mt-16" id="p-stats"></div>
+      <section class="card card-pad mt-24" id="termination-risk-levels" aria-labelledby="h-termination-risk-levels">
+        <h2 id="h-termination-risk-levels" style="font-size:16px; margin-bottom:4px;">Termination Risk Levels</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Active scholars by risk level, and those at High risk.</p>
+        <div id="c-termination-risk-levels"></div>
+      </section>
+      <section class="card card-pad mt-24" id="graduation-forecast" aria-labelledby="h-graduation-forecast">
+        <h2 id="h-graduation-forecast" style="font-size:16px; margin-bottom:4px;">Graduation Forecast</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Graduates per program, with next year&rsquo;s forecast (time-based test on the last two years).</p>
+        <div id="c-graduation-forecast"></div>
+      </section>
+      <section class="card card-pad mt-24" id="applicant-volume-forecast" aria-labelledby="h-applicant-volume-forecast">
+        <h2 id="h-applicant-volume-forecast" style="font-size:16px; margin-bottom:4px;">Applicant Volume Forecast</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Applicants per municipality, with next year&rsquo;s forecast.</p>
+        <div id="c-applicant-volume-forecast"></div>
+      </section>
+      <section class="card card-pad mt-24" id="school-performance-forecast" aria-labelledby="h-school-performance-forecast">
+        <h2 id="h-school-performance-forecast" style="font-size:16px; margin-bottom:4px;">School Performance Forecast</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Qualifiers per secondary school, with next year&rsquo;s forecast.</p>
+        <div id="c-school-performance-forecast"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../vendor/chartjs/chart.umd.min.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('predictive');
+function metricsLine(m) {
+  if (!m) return '';
+  return `<p class="text-sm text-muted" style="margin:8px 0;">Test on held-out years: MAE ${m.MAE}, RMSE ${m.RMSE}, R2 ${m.R2 ?? '—'}, MAPE ${m.MAPE_percent ?? '—'}%, sMAPE ${m.sMAPE_percent}% (${m.test_points} points).</p>`;
+}
+function forecastSection(id, f, what) {
+  const el = document.getElementById('c-' + id);
+  if (!f.available) { el.innerHTML = Live.serviceOff(); return; }
+  if (!f.enough_data) { el.innerHTML = Live.empty('No data yet', `${what} needs at least ${f.minimum_years || 4} years of records (there are ${f.years || 0}). It will appear once the DOST Davao Oriental dataset is loaded.`); return; }
+  el.innerHTML = `<p class="text-sm">${esc(f.split)}</p>${metricsLine(f.metrics)}${Live.table(['', 'Forecast year', 'Forecast'], f.next_year.slice(0, 15).map((r) => [r.group, r.year, Math.round(r.forecast)]))}`;
+}
+async function load() {
+  try {
+    const d = await IskoAPI.get('/api/analytics/predictive');
+    const m = d.model; const tr = d.termination_risk_levels;
+    document.getElementById('p-stats').innerHTML = `
+      <div class="stat-card ${m.model_trained ? 'accent-green' : 'accent-amber'}"><div class="stat-value">${m.model_trained ? esc(m.model_name) : 'No model yet'}</div><div class="stat-label">Risk model</div><div class="stat-delta flat">${m.model_trained ? `F1 ${m.test_metrics.f1} · AUC-ROC ${m.test_metrics.auc_roc}` : m.available ? 'Train it in System Management once the data is loaded' : 'Analytics service not running'}</div></div>
+      <div class="stat-card accent-red"><div class="stat-value">${tr.distribution.High}</div><div class="stat-label">High risk</div></div>
+      <div class="stat-card accent-amber"><div class="stat-value">${tr.distribution.Moderate}</div><div class="stat-label">Moderate risk</div></div>
+      <div class="stat-card accent-green"><div class="stat-value">${tr.distribution.Low}</div><div class="stat-label">Low risk</div><div class="stat-delta flat">${tr.distribution.Unknown} with no GWA yet</div></div>`;
+    const el = document.getElementById('c-termination-risk-levels');
+    if (!tr.enough_data) el.innerHTML = Live.noData('Risk levels');
+    else {
+      el.innerHTML = `${tr.source === 'model' ? '' : '<div class="callout" style="margin-bottom:12px;"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><div>No risk model has been trained yet, so these levels follow academic standing (Failed = High, Probation = Moderate, Good Standing = Low). They switch to the model predictions automatically after training.</div></div>'}
+        <div class="two-col-grid"><div>${Live.box('ch-risk', 240)}</div><div>${tr.high_risk.length ? Live.table(['Scholar ID', 'Municipality', 'Main factors'], tr.high_risk.map((s) => [`<a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(s.code)}">${esc(s.code)}</a>`, s.municipality, (s.risk.top_factors || []).map((f) => f.label).join(', ') || (s.risk.source === 'model' ? '—' : 'Latest GWA: ' + s.academic_standing)])) : '<p class="text-sm text-muted">No scholars at High risk.</p>'}</div></div>`;
+      Live.chart('ch-risk', 'doughnut', ['High', 'Moderate', 'Low', 'No GWA yet'], [{ label: 'Scholars', data: [tr.distribution.High, tr.distribution.Moderate, tr.distribution.Low, tr.distribution.Unknown], backgroundColor: ['#dc2626', '#f59e0b', '#16a34a', '#94a3b8'] }]);
+    }
+    forecastSection('graduation-forecast', d.graduation_forecast, 'The graduation forecast');
+    forecastSection('applicant-volume-forecast', d.applicant_volume_forecast, 'The applicant volume forecast');
+    forecastSection('school-performance-forecast', d.school_performance_forecast, 'The school performance forecast');
+  } catch (err) { IskoAPI.fail(err, 'Could not load predictive analytics'); }
+}
+load();
+</script>
+</body>
+</html>

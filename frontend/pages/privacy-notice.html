@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Notice · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  body { background: var(--gray-50); }
+  .pn-wrap { max-width: 820px; margin: 0 auto; padding: 36px 22px 60px; }
+  .pn-head { display: flex; align-items: center; gap: 14px; margin-bottom: 26px; }
+  .pn-head img { width: 46px; height: 46px; }
+  .pn-card { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: 30px 34px; line-height: 1.7; color: var(--gray-700); }
+  .pn-card h1 { font-size: 24px; margin-bottom: 4px; color: var(--gray-900); }
+  .pn-card h2 { font-size: 16px; margin: 26px 0 8px; color: var(--gray-900); }
+  .pn-card p, .pn-card li { font-size: 14px; }
+  .pn-card ul { padding-left: 20px; margin: 6px 0; list-style: disc; }
+  .pn-meta { font-size: 12.5px; color: var(--gray-500); }
+  .pn-back { display: inline-block; margin-top: 22px; }
+  @media (max-width: 600px) { .pn-card { padding: 22px 18px; } }
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="pn-wrap">
+  <div class="pn-head">
+    <img src="../assets/images/dost-logo.png" alt="">
+    <div><div class="pn-meta">Department of Science and Technology · Provincial Science and Technology Office, Davao Oriental</div><strong>DOST-IskoLens</strong></div>
+  </div>
+  <main class="pn-card" id="main">
+    <h1>Privacy Notice</h1>
+    <p class="pn-meta">How DOST-IskoLens collects, uses and protects personal information, under the Data Privacy Act of 2012 (Republic Act No. 10173).</p>
+
+    <h2>Who is responsible</h2>
+    <p>DOST-IskoLens is used by the DOST Provincial Science and Technology Office of Davao Oriental (DOST Davao Oriental) to manage and monitor DOST-SEI scholars. DOST Davao Oriental is the personal information controller for the data in the system. Questions and requests go to <span class="js-dpo-name">the Data Protection Officer</span>, <a class="link-action js-dpo-email" href="#">by email</a>.</p>
+
+    <h2>Whose information and what information</h2>
+    <ul>
+      <li><strong>Scholars:</strong> name, gender, date of birth, mobile number and email; municipality and secondary school; scholarship program, cycle and enrollment date; higher education institution, degree program and year level; general weighted average (GWA) per term; stipend disbursements; graduation and termination records; and supporting documents such as grade reports and certificates of registration.</li>
+      <li><strong>Staff users</strong> (Administrators and Scholarship Officers): name, email, username, contact number, office, and records of sign-ins and actions in the system.</li>
+    </ul>
+
+    <h2>Why it is used</h2>
+    <ul>
+      <li>To keep accurate records of scholars and their scholarship status, as part of DOST-SEI scholarship administration.</li>
+      <li>To monitor academic standing against the scholarship requirements and act early on scholars who need support.</li>
+      <li>To produce statistics and reports for program planning, which use counts and summaries rather than individual names.</li>
+      <li>To keep the system secure and accountable, through sign-in records and the audit log.</li>
+    </ul>
+    <p>Information is used only by authorized DOST Davao Oriental staff for these purposes. It is not sold or shared for marketing.</p>
+
+    <h2>How it is protected</h2>
+    <ul>
+      <li>Access only through individual accounts, with permissions by role (Administrator or Scholarship Officer).</li>
+      <li>Passwords stored only in hashed form; accounts lock after repeated failed sign-ins; sessions end after 30 minutes of inactivity.</li>
+      <li>Encrypted connections (HTTPS) once deployed, and daily encrypted backups.</li>
+      <li>A tamper-evident audit log of changes, exports and every opening of a scholar's profile or documents.</li>
+    </ul>
+
+    <h2>How long it is kept</h2>
+    <p>Scholar records are kept and disposed of according to the records retention policy of DOST Davao Oriental as data controller. The system lists the records whose retention period has been reached so that the office can review them. Staff accounts are kept while the person works with DOST Davao Oriental and are deactivated when they leave. The audit log is kept for accountability and is not edited.</p>
+
+    <h2>Your rights</h2>
+    <p>Under RA 10173 you have the right to be informed, to access your personal data, to object, to have inaccurate data corrected, to erasure or blocking where the law allows, to data portability, to damages, and to file a complaint with the National Privacy Commission (privacy.gov.ph). To use these rights, contact the Data Protection Officer. The office can provide a copy of all data held about you, correct records, and act on requests for erasure or blocking in line with its records policy.</p>
+
+    <h2>Changes to this notice</h2>
+    <p>This notice may be updated as the system or the law changes. The current version is always available from the sign-in page.</p>
+    <a class="btn btn-outline pn-back" href="javascript:history.length > 1 ? history.back() : (location.href = 'login.html')">Back</a>
+  </main>
+</div>
+<script>
+fetch('/api/privacy-info').then(r => r.json()).then(d => {
+  document.querySelectorAll('.js-retention').forEach(el => el.textContent = d.retention_years + ' years');
+  document.querySelectorAll('.js-dpo-name').forEach(el => el.textContent = d.dpo_name);
+  document.querySelectorAll('.js-dpo-email').forEach(el => { el.textContent = d.dpo_email; el.href = 'mailto:' + d.dpo_email; });
+}).catch(() => {});
+</script>
+</body>
+</html>

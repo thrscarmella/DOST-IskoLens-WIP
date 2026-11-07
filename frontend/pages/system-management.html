@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>System Management · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>System Management</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; System Management</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead" style="margin-bottom:20px;">Health of the web system, database and analytics service, the record import history, and the risk model. Backups and signed-in sessions are on the Data Protection page.</p>
+      <div class="stat-grid" id="sys-stats"></div>
+      <div class="two-col-grid mt-24">
+        <div class="card card-pad"><h3 style="font-size:15px; margin-bottom:12px;">Services</h3><div id="sys-services"></div></div>
+        <div class="card card-pad"><h3 style="font-size:15px; margin-bottom:12px;">Security Settings</h3><div id="sys-security"></div></div>
+      </div>
+      <div class="card card-pad mt-24">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+          <h3 style="font-size:15px;">Risk Model</h3>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn btn-outline" id="btn-score" onclick="rescore()"><i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i> Refresh Risk Levels</button>
+            <button class="btn btn-primary" id="btn-recal" onclick="recalibrate()"><i class="fa-solid fa-brain" aria-hidden="true"></i> Recalibrate Model</button>
+          </div>
+        </div>
+        <div id="sys-model"></div>
+      </div>
+      <div class="card card-pad mt-24"><h3 style="font-size:15px; margin-bottom:12px;">Import Log</h3><div id="sys-imports"></div></div>
+    </main>
+  </div>
+</div>
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('sysmanagement');
+const fmtBytes = (b) => (b > 1073741824 ? (b / 1073741824).toFixed(1) + ' GB' : (b / 1048576).toFixed(0) + ' MB');
+const fmtUp = (s) => { const d = Math.floor(s / 86400), h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60); return d ? `${d} d ${h} h` : h ? `${h} h ${m} min` : `${m} min`; };
+const okBadge = (ok, yes = 'Running', no = 'Not running') => ok ? `<span class="badge badge-green">${yes}</span>` : `<span class="badge badge-red">${no}</span>`;
+async function load() {
+  try {
+    const s = await IskoAPI.get('/api/admin/system/status');
+    const a = s.analytics;
+    document.getElementById('sys-stats').innerHTML = `
+      <div class="stat-card accent-green"><div class="stat-value">${fmtUp(s.web.uptime_seconds)}</div><div class="stat-label">Web system uptime</div><div class="stat-delta flat">Since ${esc(IskoFmt.dateTime(s.web.started_at))}</div></div>
+      <div class="stat-card ${s.database.ok ? 'accent-green' : 'accent-red'}"><div class="stat-value">${s.database.ok ? 'OK' : 'Error'}</div><div class="stat-label">Database</div><div class="stat-delta flat">${esc(s.database.type)} · ${s.database.scholars} scholars</div></div>
+      <div class="stat-card ${a.available ? 'accent-green' : 'accent-amber'}"><div class="stat-value">${a.available ? 'Running' : 'Off'}</div><div class="stat-label">Analytics service</div><div class="stat-delta flat">${a.model_trained ? 'Model ' + esc(a.model_version) : 'No model trained yet'}</div></div>
+      <div class="stat-card"><div class="stat-value">${s.disk ? fmtBytes(s.disk.free_bytes) : '—'}</div><div class="stat-label">Free disk space</div><div class="stat-delta flat">${s.backups.count} backup(s) stored</div></div>`;
+    document.getElementById('sys-services').innerHTML = Live.table(['Service', 'Status', 'Details'], [
+      ['Web system (Node.js)', okBadge(true), `${esc(s.web.node)} on ${esc(s.web.platform)}`],
+      ['Database', okBadge(s.database.ok, 'Connected', 'Error'), `${esc(s.database.type)}, ${s.database.users} users`],
+      ['Analytics service (Python)', okBadge(a.available), a.available ? (a.model_trained ? `${esc(a.model_name)}, ${a.scholars_scored} scholars scored` : 'Running, no model trained yet') : 'Start it from the analytics folder (see README)'],
+      ['Backups', s.backups.last ? '<span class="badge badge-green">OK</span>' : '<span class="badge badge-amber">None yet</span>', s.backups.last ? 'Last: ' + esc(IskoFmt.dateTime(s.backups.last.replace('Z', ''))) : 'Make one on Data Protection'],
+    ]);
+    const sec = s.security;
+    const yn = (v) => v ? '<span class="badge badge-green">On</span>' : '<span class="badge badge-gray">Off</span>';
+    document.getElementById('sys-security').innerHTML = Live.table(['Setting', 'Value'], [
+      ['HTTPS only (FORCE_HTTPS)', yn(sec.force_https)], ['Two-step verification required for Administrators', yn(sec.require_admin_2fa)],
+      ['Administrators using two-step verification', `${sec.admins_with_2fa} of ${sec.admins}`], ['Public officer sign-up', yn(sec.allow_signup)],
+      ['Email sending configured', yn(sec.mail_configured)], ['Separate backup key', yn(s.backups.separate_key)]]) + '<p class="inline-note" style="margin-top:10px;">These are set in the .env file on the server.</p>';
+    if (!a.available) document.getElementById('sys-model').innerHTML = Live.serviceOff();
+    else if (!a.model_trained) document.getElementById('sys-model').innerHTML = Live.empty('No model trained yet', 'Once the DOST dataset is loaded, click Recalibrate Model to train it on the records. Until then, risk levels follow academic standing.');
+    else document.getElementById('sys-model').innerHTML = Live.table(['Item', 'Value'], [['Model', esc(a.model_name)], ['Version', esc(a.model_version)],
+      ['Accuracy (test set)', a.test_metrics.accuracy], ['F1 (test set)', a.test_metrics.f1], ['AUC-ROC (test set)', a.test_metrics.auc_roc], ['Scholars scored', a.scholars_scored]]);
+    const im = await IskoAPI.get('/api/admin/system/imports');
+    document.getElementById('sys-imports').innerHTML = im.imports.length ? Live.table(['When', 'File', 'Type', 'Rows', 'Valid', 'With problems', 'Status', 'By'],
+      im.imports.map((r) => [IskoFmt.dateTime(r.uploaded_at), r.filename, r.kind, r.total_rows, r.valid_rows, r.error_rows,
+        `<span class="badge ${r.status === 'committed' ? 'badge-green' : r.status === 'cancelled' ? 'badge-gray' : 'badge-amber'}">${{ committed: 'Saved', cancelled: 'Cancelled', previewed: 'Not saved' }[r.status] || esc(r.status)}</span>`, r.uploaded_by]))
+      : Live.empty('No imports yet', 'Spreadsheet imports of scholars, GWA and stipend records are listed here.', 'fa-file-import');
+  } catch (err) { IskoAPI.fail(err, 'Could not load the system status'); }
+}
+async function recalibrate() {
+  confirmAction('Retrain the risk model on the records in the system, then refresh every active scholar\'s risk level? This can take a few minutes.', async () => {
+    const b = document.getElementById('btn-recal'); b.disabled = true; b.innerHTML = '<i class="fa-solid fa-spinner fa-spin" aria-hidden="true"></i> Training…';
+    try {
+      const r = await IskoAPI.post('/api/admin/system/recalibrate');
+      showToast('Model recalibrated', `${r.training.selected_model}: F1 ${r.training.test_metrics.f1}. ${r.scoring.scored || 0} scholars scored.`);
+      load();
+    } catch (err) { IskoAPI.fail(err, err.code === 'not_enough_data' ? 'Not enough data yet' : 'Recalibration failed'); }
+    finally { b.disabled = false; b.innerHTML = '<i class="fa-solid fa-brain" aria-hidden="true"></i> Recalibrate Model'; }
+  });
+}
+async function rescore() {
+  try { const r = await IskoAPI.post('/api/admin/system/score'); showToast('Risk levels refreshed', `${r.scoring.scored} scholars scored.`); load(); }
+  catch (err) { IskoAPI.fail(err, 'Not refreshed'); }
+}
+load();
+</script>
+</body>
+</html>

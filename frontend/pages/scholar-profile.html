@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholar Profile · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  /* Flat administrative notice panel — overrides the shared .card look
+     (rounded corners, full border, shadow) for this one element only. */
+  #termination-review-card {
+    border-radius: 0;
+    border: none;
+    border-left: 5px solid var(--red-600);
+    background: var(--red-50);
+    box-shadow: none;
+  }
+  /* Officer-only "Eligible for Termination Recommendation" notice — same
+     flat treatment as the pending-review panel above, in amber instead of
+     red since nothing has been filed yet. */
+  #termination-eligible-card {
+    border-radius: 0;
+    border: none;
+    border-left: 5px solid var(--amber-500);
+    background: var(--amber-50);
+    box-shadow: none;
+  }
+  /* All three lock notices — flat rectangular notices instead of the
+     default rounded .callout corners. Background/color are inherited
+     unchanged from .callout.red; only the shape changes. */
+  #lock-notice-academic,
+  #lock-notice-stipend,
+  #lock-notice-graduation {
+    border-radius: 0;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Scholar Profile</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; <a href="scholar-records.html">Scholar Records</a> &gt; <span id="crumb-name">Profile</span></div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="av-banner" style="margin-bottom:0;">
+        <div class="av-banner-avatar"><i class="fas fa-user-graduate"></i></div>
+        <div class="av-b-info">
+          <h2 id="profile-name">—</h2>
+          <div class="av-b-meta">
+            <span><i class="fa-solid fa-location-dot"></i> <span id="profile-municipality">Boston, Davao Oriental</span></span>
+            <span><i class="fa-solid fa-envelope"></i> <span id="profile-email">pedro.penduko@dostiskolens.ph</span></span>
+            <span><i class="fa-solid fa-phone"></i> <span id="profile-phone">0917-123-4567</span></span>
+          </div>
+          <div class="av-b-badges">
+            <span class="av-b-chip chip-green" id="profile-status">Active</span>
+            <span class="av-b-chip chip-green" id="profile-risk">—</span>
+            <span class="av-b-chip chip-gray" id="profile-risk-level" title="">—</span>
+          </div>
+        </div>
+        <div class="av-b-stats">
+          <div class="av-b-stat"><div class="av-b-num" id="stat-gwa">—</div><div class="av-b-label">Latest GWA</div></div>
+          <div class="av-b-stat"><div class="av-b-num" id="stat-year">4th</div><div class="av-b-label">Year Level</div></div>
+          <div class="av-b-stat"><div class="av-b-num" id="stat-stipends">3</div><div class="av-b-label">Stipends Released</div></div>
+          <div class="av-b-stat"><div class="av-b-num" id="stat-program">RA 7687</div><div class="av-b-label">Program</div></div>
+        </div>
+        <div class="profile-actions">
+          <button type="button" class="btn btn-sm av-banner-back" id="btn-edit-profile" onclick="openEditView()"><i class="fa-solid fa-pen" aria-hidden="true"></i> Edit Profile</button>
+          <button type="button" class="btn btn-sm av-banner-back" id="btn-print" onclick="printRecord()"><i class="fa-solid fa-print" aria-hidden="true"></i> Print Record</button>
+          <div style="position:relative;" id="admin-more-wrap" hidden>
+            <button type="button" class="btn btn-sm av-banner-back dropdown-trigger" onclick="toggleDropdown('more-menu')" aria-haspopup="true" aria-controls="more-menu" aria-label="More actions"><i class="fa-solid fa-ellipsis" aria-hidden="true"></i> More</button>
+            <div class="dropdown-menu" id="more-menu" role="menu">
+              <a class="dropdown-item" role="menuitem" href="#" onclick="event.preventDefault(); exportPersonalData()">Export personal data (data request)</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout" id="anonymized-banner" style="display:none; margin-top:20px;" role="note">
+        <i class="fa-solid fa-user-secret" aria-hidden="true" style="margin-top:2px;"></i>
+        <div><strong>Anonymized record.</strong> <span id="anonymized-text"></span></div>
+      </div>
+
+      <div class="card card-pad mt-24" id="termination-eligible-card" style="display:none;"></div>
+
+      <div class="card card-pad mt-24" id="termination-review-card" style="display:none;"></div>
+
+      <div class="tabs-row mt-24" id="profile-tabs">
+        <button class="tab-btn active" data-tab="personal"><i class="fa-solid fa-user"></i> Personal Information</button>
+        <button class="tab-btn" data-tab="academic"><i class="fa-solid fa-chart-line"></i> Academic Performance</button>
+        <button class="tab-btn" data-tab="stipend"><i class="fa-solid fa-money-check-dollar"></i> Stipend Disbursements</button>
+        <button class="tab-btn" data-tab="graduation"><i class="fa-solid fa-graduation-cap"></i> Graduation Record</button>
+        <button class="tab-btn" data-tab="documents"><i class="fa-solid fa-paperclip"></i> Documents <span class="badge badge-gray" id="doc-count" style="margin-left:4px;">0</span></button>
+      </div>
+
+      <div id="tab-personal">
+        <div class="profile-grid">
+          <div>
+            <div class="card card-pad">
+              <div class="profile-card-head">
+                <h3>Personal Information</h3>
+                <button class="btn btn-outline btn-sm" onclick="openModal('edit-personal-modal')"><i class="fa-solid fa-pen"></i> Edit</button>
+              </div>
+              <div class="info-grid">
+                <div><div class="info-label">Scholar ID</div><div class="info-value" id="info-code">—</div></div>
+                <div><div class="info-label">Sex</div><div class="info-value" id="info-gender">Male</div></div>
+                <div><div class="info-label">Date of Birth</div><div class="info-value" id="info-dob">March 15, 2005</div></div>
+                <div><div class="info-label">Municipality of Origin</div><div class="info-value" id="info-municipality">Mati</div></div>
+                <div><div class="info-label">Mobile Number</div><div class="info-value" id="info-mobile">0917-123-4567</div></div>
+                <div><div class="info-label">Email</div><div class="info-value" id="info-email">pedro.penduko@dostiskolens.ph</div></div>
+              </div>
+            </div>
+
+            <div class="card card-pad mt-24">
+              <div class="profile-card-head">
+                <h3>Academic Background</h3>
+                <button class="btn btn-outline btn-sm" onclick="openModal('edit-academic-bg-modal')"><i class="fa-solid fa-pen"></i> Edit</button>
+              </div>
+              <div id="academic-bg-pills">
+                <span class="tag-pill pill-teal"><i class="fa-solid fa-building-columns" style="margin-right:6px;"></i>Davao Oriental State University (DOrSU)</span>
+                <span class="tag-pill pill-teal">BS Civil Engineering</span>
+                <span class="tag-pill pill-teal">4th Year</span>
+                <span class="tag-pill pill-teal">Mati Science &amp; Technology High School</span>
+                <span class="tag-pill pill-teal">At Risk of Delay</span>
+              </div>
+            </div>
+
+            <div class="card card-pad mt-24">
+              <div class="profile-card-head">
+                <h3>Scholarship Details</h3>
+                <button class="btn btn-outline btn-sm" onclick="openModal('edit-scholarship-modal')"><i class="fa-solid fa-pen"></i> Edit</button>
+              </div>
+              <div id="scholarship-pills">
+                <span class="tag-pill pill-purple"><i class="fa-solid fa-award" style="margin-right:6px;"></i>RA 7687 Scholarship</span>
+                <span class="tag-pill pill-purple">Cycle 2022-2023 (1st Sem)</span>
+                <span class="tag-pill pill-purple">Enrolled Aug 10, 2022</span>
+                <span class="tag-pill pill-purple">DOST Davao Oriental</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="card card-pad">
+              <h3 style="font-size:14.5px; margin-bottom:4px;">Profile Completion</h3>
+              <div class="completion-ring-wrap">
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--gray-100)" stroke-width="10"></circle>
+                  <circle cx="60" cy="60" r="46" fill="none" stroke="var(--green-text)" stroke-width="10"
+                    stroke-linecap="round" stroke-dasharray="240 289" transform="rotate(-90 60 60)" id="completion-ring-circle"></circle>
+                  <text x="60" y="66" text-anchor="middle" class="completion-ring-pct" id="completion-ring-pct">83%</text>
+                </svg>
+              </div>
+              <div class="completion-caption" id="completion-caption">This scholar's profile is almost complete!</div>
+              <div class="completion-list" id="completion-list">
+              </div>
+            </div>
+
+            <div class="card card-pad mt-24">
+              <h3 style="font-size:14.5px; margin-bottom:14px;">Account Status</h3>
+              <div class="status-banner-box" id="account-status-banner">
+                <div class="status-banner-title"><i class="fa-solid fa-circle-check"></i> Verified &amp; Active</div>
+                <p>This scholar's enrollment has been verified and their scholarship is currently active in the system.</p>
+              </div>
+              <div class="status-row"><span class="sr-label">Scholar ID</span><span class="sr-value" id="account-code">—</span></div>
+              <div class="status-row"><span class="sr-label">Enrolled Since</span><span class="sr-value" id="account-enrolled-since">—</span></div>
+              <div class="status-row"><span class="sr-label">Last Record Update</span><span class="sr-value" id="account-last-update">—</span></div>
+              <div class="status-row"><span class="sr-label">Encoded By</span><span class="sr-value" id="account-encoded-by">—</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad" id="tab-academic" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="font-size:15px;">Academic Performance <span id="lock-icon-academic" style="display:none;">🔒</span></h3>
+          <button class="btn btn-primary btn-sm" id="btn-add-academic" onclick="openAcadView()"><i class="fa-solid fa-plus"></i> Add Performance Record</button>
+        </div>
+        <div class="callout red" id="lock-notice-academic" style="display:none; margin-bottom:16px;">
+          <i class="fa-solid fa-lock" style="margin-top:2px;"></i>
+          <div><strong>Record Locked</strong> — This scholar is terminated. New academic performance records cannot be added.</div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Academic Year</th><th>Semester</th><th>Year Level</th><th>GWA</th><th>Academic Standing</th><th>Date Recorded</th><th class="admin-col"></th></tr></thead>
+            <tbody id="academic-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-pad" id="tab-stipend" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="font-size:15px;">Stipend Disbursements <span id="lock-icon-stipend" style="display:none;">🔒</span></h3>
+          <button class="btn btn-primary btn-sm" id="btn-add-stipend" onclick="openModal('add-stipend-modal')"><i class="fa-solid fa-plus"></i> Add Disbursement Record</button>
+        </div>
+        <div class="callout red" id="lock-notice-stipend" style="display:none; margin-bottom:16px;">
+          <i class="fa-solid fa-lock" style="margin-top:2px;"></i>
+          <div><strong>Record Locked</strong> — No new stipend records can be added for a terminated scholar.</div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Disbursement Period</th><th>Amount</th><th>Date Released</th><th>Status</th><th>Remarks</th><th></th></tr></thead>
+            <tbody id="stipend-history-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card card-pad" id="tab-graduation" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h3 style="font-size:15px;">Graduation Record <span id="lock-icon-graduation" style="display:none;">🔒</span></h3>
+          <button class="btn btn-outline btn-sm" id="btn-edit-graduation" onclick="openModal('edit-graduation-modal')"><i class="fa-solid fa-pen"></i> Edit Record</button>
+        </div>
+        <div class="callout red" id="lock-notice-graduation" style="display:none; margin-bottom:16px;">
+          <i class="fa-solid fa-lock" style="margin-top:2px;"></i>
+          <div><strong>Record Locked</strong> — This record is read-only because the scholar is terminated.</div>
+        </div>
+        <div class="form-row">
+          <div><div class="text-sm text-muted" style="text-transform:uppercase; font-weight:700; font-size:11px;">Expected Graduation Date</div><div style="margin-top:4px;" id="grad-expected">March 2026</div></div>
+          <div><div class="text-sm text-muted" style="text-transform:uppercase; font-weight:700; font-size:11px;">Actual Graduation Date</div><div style="margin-top:4px;" id="grad-actual">Not yet graduated</div></div>
+          <div><div class="text-sm text-muted" style="text-transform:uppercase; font-weight:700; font-size:11px;">Graduation Status</div><div style="margin-top:4px;" id="grad-status"><span class="badge badge-amber">At Risk of Delay</span></div></div>
+          <div><div class="text-sm text-muted" style="text-transform:uppercase; font-weight:700; font-size:11px;">Delay Reason</div><div style="margin-top:4px;" id="grad-delay-reason">Academic performance below threshold in 2023-2024</div></div>
+        </div>
+      </div>
+
+      <div class="card card-pad" id="tab-documents" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; gap:12px; flex-wrap:wrap;">
+          <h3 style="font-size:15px;">Supporting Documents</h3>
+          <button class="btn btn-primary btn-sm" id="btn-add-document" onclick="openDocUpload()"><i class="fa-solid fa-upload" aria-hidden="true"></i> Upload Document</button>
+        </div>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Grade reports, certificates of registration, and evidence for termination or appeals. PDF, JPG or PNG, up to 10 MB each. Opening a document is recorded in the audit log.</p>
+        <div class="table-wrap">
+          <table class="data-table">
+            <caption class="visually-hidden">Supporting documents for this scholar</caption>
+            <thead><tr><th scope="col">Type</th><th scope="col">File</th><th scope="col">Description</th><th scope="col">Uploaded</th><th scope="col"><span class="visually-hidden">Actions</span></th></tr></thead>
+            <tbody id="documents-body"><tr><td colspan="5" class="text-sm text-muted">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Edit Profile view: the only thing shown while editing -->
+      <div id="edit-view" class="ev-layout">
+          <form id="ev-form" novalidate>
+            <div class="ev-card">
+              <!-- Section 1: Personal Information -->
+              <div class="ev-section">
+                <div class="ev-sec-head">
+                  <div class="ev-num">1</div>
+                  <div class="ev-sec-title">Personal Information</div>
+                  <div class="ev-divider"></div>
+                </div>
+                <div class="ev-grid2">
+                  <div class="ev-field">
+                    <label class="ev-label">Sex<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-gender"><option value="">Select sex</option></select>
+                    <div class="ev-error" id="ev-err-gender"><i class="fas fa-exclamation-circle"></i>Please select the sex.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Date of Birth<span class="ev-star">*</span></label>
+                    <input type="date" class="ev-control" id="ev-dob">
+                    <div class="ev-error" id="ev-err-dob"><i class="fas fa-exclamation-circle"></i>Date of birth is required.</div>
+                    <div class="ev-hint" id="ev-hint-age"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 2: Scholarship Details -->
+              <div class="ev-section">
+                <div class="ev-sec-head">
+                  <div class="ev-num">2</div>
+                  <div class="ev-sec-title">Scholarship Details</div>
+                  <div class="ev-divider"></div>
+                </div>
+                <div class="ev-grid2" style="margin-bottom:16px;">
+                  <div class="ev-field">
+                    <label class="ev-label">Scholarship Cycle<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-cycle"><option value="">Select cycle</option></select>
+                    <div class="ev-error" id="ev-err-cycle"><i class="fas fa-exclamation-circle"></i>Please select a scholarship cycle.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Date of Scholarship Enrollment<span class="ev-star">*</span></label>
+                    <input type="date" class="ev-control" id="ev-enroll">
+                    <div class="ev-error" id="ev-err-enroll"><i class="fas fa-exclamation-circle"></i>Enrollment date is required.</div>
+                  </div>
+                </div>
+                <div class="ev-grid2">
+                  <div class="ev-field">
+                    <label class="ev-label">Municipality of Origin<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-muni"><option value="">Select municipality</option></select>
+                    <div class="ev-error" id="ev-err-muni"><i class="fas fa-exclamation-circle"></i>Please select a municipality.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Secondary School Attended<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-school"><option value="">Select secondary school</option></select>
+                    <div class="ev-error" id="ev-err-school"><i class="fas fa-exclamation-circle"></i>Please select a secondary school.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Section 3: Higher Education -->
+              <div class="ev-section">
+                <div class="ev-sec-head">
+                  <div class="ev-num">3</div>
+                  <div class="ev-sec-title">Higher Education</div>
+                  <div class="ev-divider"></div>
+                </div>
+                <div class="ev-grid3">
+                  <div class="ev-field">
+                    <label class="ev-label">Higher Education Institution<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-hei"><option value="">Select HEI</option></select>
+                    <div class="ev-error" id="ev-err-hei"><i class="fas fa-exclamation-circle"></i>Please select an HEI.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Degree Program<span class="ev-star">*</span></label>
+                    <input type="text" class="ev-control" id="ev-degree" placeholder="e.g. BS Computer Science">
+                    <div class="ev-error" id="ev-err-degree"><i class="fas fa-exclamation-circle"></i>Degree program is required.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Current Year Level<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="ev-year"><option value="">Select year level</option></select>
+                    <div class="ev-error" id="ev-err-year"><i class="fas fa-exclamation-circle"></i>Please select a year level.</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Footer -->
+              <div class="ev-footer">
+                <div style="font-size:12px;color:var(--text-400);"><i class="fas fa-asterisk" style="color:var(--red);font-size:9px;"></i> Required fields must be filled before saving.</div>
+                <div class="ev-footer-right">
+                  <button type="button" class="btn btn-outline" onclick="closeEditView()"><i class="fas fa-times"></i>Cancel</button>
+                  <button type="button" class="btn btn-primary" onclick="submitEditProfile()"><i class="fas fa-save"></i>Save Scholar Record</button>
+                </div>
+              </div>
+            </div>
+          </form>
+
+          <!-- SIDEBAR -->
+          <div class="ev-side">
+            <!-- Stepper -->
+            <div class="ev-stepper">
+              <div class="ev-stepper-title">Form Progress</div>
+              <div class="ev-step done" id="ev-step-1">
+                <div class="ev-step-conn"></div>
+                <div class="ev-step-dot"><i class="fas fa-check" style="font-size:10px;"></i></div>
+                <div class="ev-step-info">
+                  <div class="ev-step-label">Personal Information</div>
+                  <div class="ev-step-desc">Sex, date of birth</div>
+                </div>
+              </div>
+              <div class="ev-step current" id="ev-step-2">
+                <div class="ev-step-conn"></div>
+                <div class="ev-step-dot">2</div>
+                <div class="ev-step-info">
+                  <div class="ev-step-label">Scholarship Details</div>
+                  <div class="ev-step-desc">Cycle, municipality, school</div>
+                </div>
+              </div>
+              <div class="ev-step" id="ev-step-3">
+                <div class="ev-step-dot">3</div>
+                <div class="ev-step-info">
+                  <div class="ev-step-label">Higher Education</div>
+                  <div class="ev-step-desc">HEI, degree, year level</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tips -->
+            <div class="ev-tips">
+              <div class="ev-tips-title"><i class="fas fa-lightbulb"></i>Encoding Tips</div>
+              <div class="ev-tip"><i class="fas fa-check-circle"></i>Verify the scholar's PSA birth certificate before encoding the date of birth.</div>
+              <div class="ev-tip"><i class="fas fa-check-circle"></i>Ensure the municipality matches the scholar's Certificate of Indigency.</div>
+              <div class="ev-tip"><i class="fas fa-check-circle"></i>Scholarship Cycle should match the DOST Davao Oriental official cycle designation.</div>
+              <div class="ev-tip"><i class="fas fa-check-circle"></i><span>All required fields (<span style="color:var(--red);">*</span>) must be completed before saving.</span></div>
+            </div>
+
+            <!-- Required fields count -->
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:var(--shadow-xs);">
+              <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-400);margin-bottom:10px;">Completion Status</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <div style="flex:1;height:7px;background:var(--border);border-radius:4px;overflow:hidden;">
+                  <div id="ev-progress-bar" style="height:100%;background:linear-gradient(90deg,var(--navy),var(--blue-soft));border-radius:4px;width:0%;transition:width .3s;"></div>
+                </div>
+                <span id="ev-progress-pct" style="font-family:var(--font-d);font-size:13px;font-weight:700;color:var(--navy);width:36px;text-align:right;">0%</span>
+              </div>
+              <div style="font-size:12px;color:var(--text-400);" id="ev-progress-label">0 of 10 required fields filled</div>
+            </div>
+          </div>
+      </div>
+
+      <!-- Add Performance Record view: the only thing shown while adding -->
+      <div id="acad-view">
+        <div class="av-banner">
+          <div class="av-banner-avatar"><i class="fas fa-user-graduate"></i></div>
+          <div class="av-b-info">
+            <h2 id="av-b-name"></h2>
+            <div class="av-b-meta">
+              <span><i class="fa-solid fa-location-dot"></i> <span id="av-b-location"></span></span>
+              <span><i class="fa-solid fa-envelope"></i> <span id="av-b-email"></span></span>
+              <span><i class="fa-solid fa-phone"></i> <span id="av-b-phone"></span></span>
+            </div>
+            <div class="av-b-badges">
+              <span class="av-b-chip chip-green" id="av-b-status">Active</span>
+              <span class="av-b-chip chip-green" id="av-b-risk">—</span>
+            </div>
+          </div>
+          <div class="av-b-stats">
+            <div class="av-b-stat"><div class="av-b-num" id="av-b-gwa"></div><div class="av-b-label">Latest GWA</div></div>
+            <div class="av-b-stat"><div class="av-b-num" id="av-b-year"></div><div class="av-b-label">Year Level</div></div>
+            <div class="av-b-stat"><div class="av-b-num" id="av-b-stipends"></div><div class="av-b-label">Stipends Released</div></div>
+            <div class="av-b-stat"><div class="av-b-num" id="av-b-program"></div><div class="av-b-label">Program</div></div>
+          </div>
+          <button type="button" class="btn btn-sm av-banner-back" onclick="closeAcadView()"><i class="fas fa-arrow-left"></i> Back to Profile</button>
+        </div>
+        <div class="av-layout">
+          <div>
+            <div class="ev-card">
+              <div class="ev-section">
+                <div class="ev-sec-head">
+                  <div class="ev-num" style="background:var(--indigo);"><i class="fas fa-book" style="font-size:12px;"></i></div>
+                  <div class="ev-sec-title">Academic Performance Record</div>
+                  <div class="ev-divider"></div>
+                </div>
+
+                <!-- Read-only scholar -->
+                <div class="ev-field" style="margin-bottom:18px;">
+                  <label class="ev-label">Scholar (Pre-filled)</label>
+                  <input type="text" class="ev-control" id="av-scholar" value="" readonly>
+                  <div class="ev-hint"><i class="fas fa-info-circle" style="color:var(--navy-mid);"></i> Linked to the selected scholar's profile. To change, go back to scholar records.</div>
+                </div>
+
+                <div class="ev-grid2" style="margin-bottom:18px;">
+                  <div class="ev-field">
+                    <label class="ev-label">Academic Year<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="av-year"><option value="">Select academic year</option></select>
+                    <div class="ev-error" id="av-err-year"><i class="fas fa-exclamation-circle"></i>Academic year is required.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Semester<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="av-sem"><option value="">Select semester</option></select>
+                    <div class="ev-error" id="av-err-sem"><i class="fas fa-exclamation-circle"></i>Semester is required.</div>
+                  </div>
+                </div>
+
+                <div class="ev-grid2" style="margin-bottom:18px;">
+                  <div class="ev-field">
+                    <label class="ev-label">General Weighted Average (GWA)<span class="ev-star">*</span></label>
+                    <input type="number" class="ev-control" id="av-gwa" placeholder="e.g. 1.75 or 88" step="0.01" min="1" max="100" style="font-size:18px;font-family:var(--font-d);font-weight:700;letter-spacing:.5px;">
+                    <div class="ev-hint" id="av-gwa-hint">Enter 1.00 to 5.00 (1.00 is highest), or 50 to 100 if the HEI reports a percentage.</div>
+                    <div class="ev-error" id="av-err-gwa"><i class="fas fa-exclamation-circle"></i>Enter a GWA from 1.00 to 5.00, or 50 to 100 for a percentage.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Academic Standing<span class="ev-star">*</span></label>
+                    <input type="text" class="ev-control" id="av-standing" placeholder="Auto-computed from GWA" readonly style="font-weight:700;">
+                    <div class="ev-hint"><i class="fas fa-magic" style="color:var(--indigo);"></i> Computed from the GWA and the year level for this term.</div>
+                    <div class="av-scale" id="av-scale">
+                      <div class="av-seg good inactive">Good Standing<br><span style="font-size:9.5px;" id="av-seg-good">—</span></div>
+                      <div class="av-seg prob inactive">Probation<br><span style="font-size:9.5px;" id="av-seg-prob">—</span></div>
+                      <div class="av-seg fail inactive">Failed<br><span style="font-size:9.5px;" id="av-seg-fail">—</span></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="ev-grid2">
+                  <div class="ev-field">
+                    <label class="ev-label">Year Level for This Term<span class="ev-star">*</span></label>
+                    <select class="ev-control" id="av-level"></select>
+                    <div class="ev-hint">1st and 2nd year need at least 85% (2.00). 3rd year and up only need a passing grade.</div>
+                  </div>
+                  <div class="ev-field">
+                    <label class="ev-label">Date Recorded<span class="ev-star">*</span></label>
+                    <input type="date" class="ev-control" id="av-date">
+                    <div class="ev-error" id="av-err-date"><i class="fas fa-exclamation-circle"></i>Date recorded is required.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="ev-footer">
+                <div style="font-size:12px;color:var(--text-400);" id="av-link-note">This record will be linked to the selected scholar</div>
+                <div class="ev-footer-right">
+                  <button type="button" class="btn btn-outline" onclick="closeAcadView()"><i class="fas fa-times"></i>Cancel</button>
+                  <button type="button" class="btn btn-primary" onclick="submitAcadRecord()"><i class="fas fa-save"></i>Save Record</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <!-- GWA Visualizer -->
+            <div class="av-gwa-box">
+              <div class="av-gwa-title"><i class="fas fa-tachometer-alt" style="color:var(--navy);margin-right:5px;"></i>GWA Indicator</div>
+              <div class="av-gauge">
+                <svg viewBox="0 0 130 72" xmlns="http://www.w3.org/2000/svg">
+                  <!-- Track -->
+                  <path d="M 10 65 A 55 55 0 0 1 120 65" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round"/>
+                  <!-- Good zone (green) -->
+                  <path d="M 10 65 A 55 55 0 0 1 26.1 26.1" fill="none" stroke="#1a9e4a" stroke-width="12" stroke-linecap="round" opacity=".6"/>
+                  <!-- Probation zone (amber) -->
+                  <path d="M 26.1 26.1 A 55 55 0 0 1 65 10" fill="none" stroke="#f59e0b" stroke-width="12" stroke-linecap="round" opacity=".6"/>
+                  <!-- Failed zone (red) -->
+                  <path d="M 65 10 A 55 55 0 0 1 120 65" fill="none" stroke="#d63031" stroke-width="12" stroke-linecap="round" opacity=".6"/>
+                  <!-- Needle -->
+                  <line id="av-needle" x1="65" y1="65" x2="65" y2="18" stroke="#1a1b35" stroke-width="2.5" stroke-linecap="round" transform="rotate(-90 65 65)" style="transition:transform .4s cubic-bezier(.34,1.56,.64,1);"/>
+                  <circle cx="65" cy="65" r="5" fill="#1a1b35"/>
+                </svg>
+              </div>
+              <div class="av-gwa-value" id="av-gwa-value">—</div>
+              <div class="av-gwa-label empty" id="av-gwa-chip"><i class="fas fa-minus"></i>&nbsp;Not Entered</div>
+            </div>
+
+            <!-- Previous GWA records (rows are built from this scholar's academic history) -->
+            <div class="av-history">
+              <div class="av-hp-head"><i class="fas fa-history" style="color:var(--navy);margin-right:6px;font-size:12px;"></i>Previous GWA Records</div>
+              <div id="av-history-rows"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="edit-personal-modal">
+  <div class="modal-box"><div class="modal-header"><span>Edit Personal Information</span><button class="modal-close" onclick="closeModal('edit-personal-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label" for="ep-gender">Sex <span class="required">*</span></label><select class="form-control" id="ep-gender"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Date of Birth <span class="required">*</span></label><input type="date" class="form-control" id="ep-dob"></div>
+        <div class="form-group"><label class="form-label">Mobile Number <span class="required">*</span></label><input type="tel" class="form-control" id="ep-mobile"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" class="form-control" id="ep-email"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('edit-personal-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSection('personal')">Save Changes</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="edit-academic-bg-modal">
+  <div class="modal-box"><div class="modal-header"><span>Edit Academic Background</span><button class="modal-close" onclick="closeModal('edit-academic-bg-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Higher Education Institution <span class="required">*</span></label><select class="form-control" id="eb-hei"></select></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Degree Program <span class="required">*</span></label><input class="form-control" id="eb-degree"></div>
+        <div class="form-group"><label class="form-label">Current Year Level <span class="required">*</span></label><select class="form-control" id="eb-year"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Municipality of Origin <span class="required">*</span></label><select class="form-control" id="eb-muni"></select></div>
+        <div class="form-group"><label class="form-label">Secondary School Attended <span class="required">*</span></label><select class="form-control" id="eb-school"></select></div>
+      </div>
+      <div class="form-hint">Academic standing is computed from the GWA records, so it is not edited here.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('edit-academic-bg-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSection('background')">Save Changes</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="edit-scholarship-modal">
+  <div class="modal-box"><div class="modal-header"><span>Edit Scholarship Details</span><button class="modal-close" onclick="closeModal('edit-scholarship-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Scholarship Program <span class="required">*</span></label><select class="form-control" id="es-program"></select></div>
+        <div class="form-group"><label class="form-label">Scholarship Cycle <span class="required">*</span></label><select class="form-control" id="es-cycle"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Date of Enrollment <span class="required">*</span></label><input type="date" class="form-control" id="es-enroll"></div>
+        <div class="form-group"><label class="form-label">Administering Office</label><input class="form-control" value="DOST Davao Oriental" disabled></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('edit-scholarship-modal')">Cancel</button><button class="btn btn-primary" onclick="saveSection('scholarship')">Save Changes</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="add-stipend-modal">
+  <div class="modal-box"><div class="modal-header"><span id="st-title">Add Disbursement Record</span><button class="modal-close" onclick="closeModal('add-stipend-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label">Disbursement Period <span class="required">*</span></label><input class="form-control" id="st-period" placeholder="e.g. 1st Semester 2024-2025"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Amount (₱) <span class="required">*</span></label><input class="form-control" id="st-amount" type="number" min="1" step="0.01" placeholder="e.g. 20000"></div>
+        <div class="form-group"><label class="form-label">Status <span class="required">*</span></label><select class="form-control" id="st-status"></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Date Released</label><input class="form-control" id="st-date" type="date"><div class="form-hint">Required when the status is Released.</div></div>
+      <div class="form-group"><label class="form-label">Remarks</label><input class="form-control" id="st-remarks" placeholder="Required for Inconsistent, e.g. amount does not match the payroll"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('add-stipend-modal')">Cancel</button><button class="btn btn-primary" onclick="saveStipend()">Save Record</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="edit-graduation-modal">
+  <div class="modal-box"><div class="modal-header"><span>Edit Graduation Record</span><button class="modal-close" onclick="closeModal('edit-graduation-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Expected Graduation</label><input class="form-control" type="month" id="gr-expected"></div>
+        <div class="form-group"><label class="form-label">Graduation Status <span class="required">*</span></label><select class="form-control" id="gr-status"></select></div>
+      </div>
+      <div class="form-group" id="gr-actual-wrap"><label class="form-label">Actual Graduation Date <span class="required">*</span></label><input class="form-control" type="date" id="gr-actual"></div>
+      <div class="form-group" id="gr-reason-wrap"><label class="form-label">Delay Reason <span class="required">*</span></label><input class="form-control" id="gr-reason" placeholder="e.g. Failed a prerequisite subject in 2nd semester"></div>
+      <div class="form-hint">Setting the status to Graduated also changes the scholar's status to Graduated.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('edit-graduation-modal')">Cancel</button><button class="btn btn-primary" onclick="saveGraduation()">Save Changes</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="return-request-modal">
+  <div class="modal-box"><div class="modal-header"><span>Return for More Information</span><button class="modal-close" onclick="closeModal('return-request-modal')">&times;</button></div>
+    <div class="modal-body">
+      <p class="text-sm" style="margin-bottom:12px;">The scholar goes back to Active and the officer is notified with your note.</p>
+      <div class="form-group"><label class="form-label">What does the officer need to add? <span class="required">*</span></label><textarea class="form-control" id="rr-remarks" rows="5" placeholder="e.g. Attach the dates of the counseling sessions and the HEI's latest grade report."></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('return-request-modal')">Cancel</button><button class="btn btn-primary" onclick="submitReturn()">Return to Officer</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="edit-record-modal">
+  <div class="modal-box"><div class="modal-header"><span>Correct Academic Record</span><button class="modal-close" onclick="closeModal('edit-record-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Academic Year <span class="required">*</span></label><select class="form-control" id="er-year"></select></div>
+        <div class="form-group"><label class="form-label">Semester <span class="required">*</span></label><select class="form-control" id="er-sem"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">GWA <span class="required">*</span></label><input class="form-control" type="number" step="0.01" min="1" max="100" id="er-gwa"><div class="form-hint" id="er-preview">—</div></div>
+        <div class="form-group"><label class="form-label">Year Level for This Term <span class="required">*</span></label><select class="form-control" id="er-level"></select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Date Recorded <span class="required">*</span></label><input class="form-control" type="date" id="er-date"></div>
+      <div class="form-group"><label class="form-label">Reason for the correction <span class="required">*</span></label><input class="form-control" id="er-reason" placeholder="e.g. Typo: 3.75 should be 1.75, per the HEI grade report"></div>
+      <div class="form-hint">The old and new values and your reason are kept in the audit log.</div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('edit-record-modal')">Cancel</button><button class="btn btn-primary" onclick="saveRecordCorrection()">Save Correction</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="doc-modal">
+  <div class="modal-box" style="max-width:500px;"><div class="modal-header"><span>Upload Document</span><button class="modal-close" onclick="closeModal('doc-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group"><label class="form-label" for="dc-type">Document type <span class="required">*</span></label><select class="form-control" id="dc-type"></select></div>
+      <div class="form-group"><label class="form-label" for="dc-file">File <span class="required">*</span></label><input class="form-control" type="file" id="dc-file" accept=".pdf,.jpg,.jpeg,.png"><div class="form-hint">PDF, JPG or PNG, up to 10 MB.</div></div>
+      <div class="form-group"><label class="form-label" for="dc-desc">Description</label><input class="form-control" id="dc-desc" maxlength="255" placeholder="e.g. 1st Semester 2025-2026 grade report from DOrSU"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('doc-modal')">Cancel</button><button class="btn btn-primary" id="dc-submit" onclick="uploadDocument()">Upload</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="reason-modal">
+  <div class="modal-box" style="max-width:480px;"><div class="modal-header"><span id="rm-title">Confirm</span><button class="modal-close" onclick="closeReason()">&times;</button></div>
+    <div class="modal-body">
+      <p class="text-sm" id="rm-message" style="margin-bottom:12px;"></p>
+      <div class="form-group"><label class="form-label" id="rm-label">Reason <span class="required">*</span></label><textarea class="form-control" id="rm-text" rows="3"></textarea></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeReason()">Cancel</button><button class="btn btn-danger" id="rm-confirm">Confirm</button></div>
+  </div>
+</div>
+<div class="side-drawer-overlay" id="recommend-termination-drawer-overlay"></div>
+<div class="side-drawer" id="recommend-termination-drawer">
+  <div class="side-drawer-header">
+    <h3>Recommend for Termination</h3>
+    <button class="side-drawer-close" onclick="closeDrawer('recommend-termination-drawer')">&times;</button>
+  </div>
+  <div class="side-drawer-body">
+    <div class="callout amber mb-16"><i class="fa-solid fa-circle-info" style="margin-top:2px;"></i>
+      <div>This sends a recommendation to the Administrator for review. The scholar's status will show as <strong>Pending Termination Review</strong> until a decision is made — nothing is finalized by submitting this form.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Grounds for Termination <span class="required">*</span></label>
+      <select class="form-control" id="rt-grounds" required>
+        <option value="">Select grounds</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Supporting Notes / Evidence <span class="required">*</span></label>
+      <textarea class="form-control" id="rt-notes" rows="10" placeholder="Summarize the case: interventions already attempted, dates, and why termination is now being recommended." required></textarea>
+      <div class="form-hint">At least 30 characters. The Administrator reads this before deciding.</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="rt-date">Proposed Effective Date <span class="required">*</span></label>
+      <input type="date" class="form-control" id="rt-date" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="rt-files">Supporting evidence (optional)</label>
+      <input type="file" class="form-control" id="rt-files" accept=".pdf,.jpg,.jpeg,.png" multiple>
+      <div class="form-hint">For example counseling records or the HEI's grade report. PDF, JPG or PNG, up to 10 MB each. Saved under the scholar's Documents.</div>
+    </div>
+  </div>
+  <div class="side-drawer-footer">
+    <button class="btn btn-outline" onclick="closeDrawer('recommend-termination-drawer')">Cancel</button>
+    <button class="btn btn-danger" onclick="submitTerminationRecommendation()">Submit Recommendation</button>
+  </div>
+</div>
+
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-primary" id="confirm-modal-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+renderShell('scholars');
+const role = ISKOLENS_DATA.currentUser.role;
+const user = ISKOLENS_DATA.currentUser;
+const CODE = new URLSearchParams(location.search).get('id');
+let S = null;      // scholar detail from the API
+let LK = null;     // lookups
+/* Dropdown lists from the server (never fixed in the page) */
+function fillFixedSelects() {
+  const o = LK.options;
+  IskoAPI.fillSelect('ev-gender', o.sexes, 'Select sex', '', 'label', 'value');
+  IskoAPI.fillSelect('ep-gender', o.sexes, null, '', 'label', 'value');
+  IskoAPI.fillSelect('av-sem', o.semesters, 'Select semester', '', 'label', 'value');
+  IskoAPI.fillSelect('er-sem', o.semesters, null, '', 'label', 'value');
+  IskoAPI.fillSelect('st-status', o.stipend_statuses, null, '', 'label', 'value');
+  IskoAPI.fillSelect('gr-status', o.graduation_statuses, null, '', 'label', 'value');
+  IskoAPI.fillSelect('rt-grounds', o.termination_grounds, 'Select grounds', '', 'label', 'value');
+}
+let editingStipendId = null;
+
+const $ = id => document.getElementById(id);
+const v = id => ($(id) ? $(id).value.trim() : '');
+const chip = (el, text, tone) => { el.textContent = text; el.className = 'av-b-chip chip-' + tone; };
+const statusTone = st => ({ active: 'green', pending_termination: 'amber', graduated: 'blue' }[st] || 'red');
+const standingTone = st => !st ? 'gray' : st === 'Good Standing' ? 'green' : st === 'Probation' ? 'amber' : 'red';
+
+async function loadScholar() {
+  if (!CODE) { showNotFound('No scholar was selected.'); return; }
+  try {
+    const [lk, res] = await Promise.all([IskoAPI.lookups(), IskoAPI.get('/api/scholars/' + encodeURIComponent(CODE))]);
+    LK = lk;
+    fillFixedSelects();
+    S = res.scholar;
+    render();
+  } catch (err) {
+    showNotFound(err.message);
+  }
+}
+
+function showNotFound(msg) {
+  document.querySelector('.page-body').innerHTML = `<div class="card card-pad"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-user-slash"></i></div><h3>Scholar record unavailable</h3><p>${esc(msg)}</p><a class="btn btn-primary mt-16" href="scholar-records.html">Back to Scholar Records</a></div></div>`;
+}
+
+function render() {
+  const muniName = S.municipality;
+  $('profile-name').textContent = S.code;
+  $('crumb-name').textContent = S.code;
+  document.title = `${S.code} · DOST-IskoLens`;
+  $('profile-municipality').textContent = `${muniName}, Davao Oriental`;
+  $('profile-email').textContent = S.email || 'No email on file';
+  $('profile-phone').textContent = S.mobile_number;
+  $('stat-gwa').textContent = IskoFmt.gwa(S.current_gwa, S.current_gwa_scale);
+  $('stat-year').textContent = IskoFmt.yearLevel(S.year_level).replace(' Year', '');
+  $('stat-stipends').textContent = S.stipends_released;
+  $('stat-program').textContent = S.program;
+  chip($('profile-status'), S.is_deactivated ? 'Deactivated' : S.status_label, S.is_deactivated ? 'red' : statusTone(S.status));
+  chip($('profile-risk'), S.academic_standing || 'No GWA record yet', standingTone(S.academic_standing));
+  const rk = S.risk || {};
+  chip($('profile-risk-level'), rk.level ? `${rk.level} risk${rk.source === 'model' ? '' : '*'}` : 'Risk: —', { High: 'red', Moderate: 'amber', Low: 'green' }[rk.level] || 'gray');
+  $('profile-risk-level').title = rk.source === 'model'
+    ? `From the risk model${(rk.top_factors || []).length ? '. Main factors: ' + rk.top_factors.map((f) => f.label).join(', ') : ''}`
+    : 'Based on academic standing until a risk model is trained';
+
+  // Personal information
+  $('info-code').textContent = S.code;
+  $('info-gender').textContent = S.gender;
+  $('info-dob').textContent = IskoFmt.dateLong(S.birth_date);
+  $('info-municipality').textContent = muniName;
+  $('info-mobile').textContent = S.mobile_number;
+  $('info-email').textContent = S.email || '—';
+  $('academic-bg-pills').innerHTML = `
+    <span class="tag-pill pill-teal"><i class="fa-solid fa-building-columns" style="margin-right:6px;"></i>${esc(S.hei)}</span>
+    <span class="tag-pill pill-teal">${esc(S.degree_program)}</span>
+    <span class="tag-pill pill-teal">${esc(IskoFmt.yearLevel(S.year_level))}</span>
+    <span class="tag-pill pill-teal">${esc(S.secondary_school)}</span>
+    <span class="tag-pill pill-teal">${esc(S.academic_standing || 'No GWA record yet')}</span>`;
+  $('scholarship-pills').innerHTML = `
+    <span class="tag-pill pill-purple"><i class="fa-solid fa-award" style="margin-right:6px;"></i>${esc(S.program)} Scholarship</span>
+    <span class="tag-pill pill-purple">Cycle ${esc(S.cycle)}</span>
+    <span class="tag-pill pill-purple">Enrolled ${esc(IskoFmt.date(S.enrollment_date))}</span>
+    <span class="tag-pill pill-purple">${esc(S.administering_office)}</span>`;
+
+  // Completion
+  const pct = S.completion.percent;
+  $('completion-ring-circle').setAttribute('stroke-dasharray', `${Math.round(289 * pct / 100)} 289`);
+  $('completion-ring-pct').textContent = pct + '%';
+  $('completion-caption').textContent = pct >= 100 ? 'This scholar\'s profile is complete.' : pct >= 70 ? 'This scholar\'s profile is almost complete.' : 'Some profile details are still missing.';
+  $('completion-list').innerHTML = S.completion.items.map(i =>
+    `<div class="completion-item ${i.done ? 'done' : 'todo'}"><i class="fa-${i.done ? 'solid fa-circle-check' : 'regular fa-circle'}"></i> ${esc(i.label)}</div>`).join('');
+
+  // Account status card
+  const banner = $('account-status-banner');
+  const title = banner.querySelector('.status-banner-title');
+  const states = {
+    terminated: ['fa-circle-xmark', 'Terminated', 'var(--red-text)', 'var(--red-50)', 'var(--red-100)', 'This scholarship has been terminated. Records stay on file for audit and reference.'],
+    pending_termination: ['fa-triangle-exclamation', 'Under Review', 'var(--amber-text)', 'var(--amber-50)', 'var(--amber-100)', 'A termination recommendation is waiting for Administrator review.'],
+    graduated: ['fa-graduation-cap', 'Graduated', 'var(--blue-600)', 'var(--blue-50)', 'var(--blue-100)', 'This scholar has completed the program.'],
+    active: ['fa-circle-check', 'Active', '', '', '', 'This scholarship is currently active in the system.']
+  };
+  const st = S.is_deactivated ? ['fa-eye-slash', 'Record Deactivated', 'var(--gray-600)', 'var(--gray-100)', 'var(--gray-200)', 'This record is hidden from scholar lists. An Administrator can restore it.'] : states[S.status];
+  title.innerHTML = `<i class="fa-solid ${st[0]}"></i> ${esc(st[1])}`;
+  title.style.color = st[2]; banner.style.background = st[3]; banner.style.borderColor = st[4];
+  banner.querySelector('p').textContent = st[5];
+  $('account-code').textContent = S.code;
+  $('account-enrolled-since').textContent = IskoFmt.date(S.enrollment_date);
+  $('account-last-update').textContent = IskoFmt.relative(S.last_updated_at);
+  $('account-encoded-by').textContent = S.created_by || '—';
+
+  // Academic performance
+  const canCorrect = role === 'admin' && S.status !== 'terminated' && !S.is_deactivated;
+  document.querySelectorAll('.admin-col').forEach(th => th.style.display = canCorrect ? '' : 'none');
+  $('academic-history-body').innerHTML = S.academic_records.length ? S.academic_records.map(r => `
+    <tr><td>${esc(r.academic_year)}</td><td>${esc(r.semester)}</td><td>${esc(IskoFmt.yearLevel(r.year_level_at_record))}</td>
+    <td>${esc(IskoFmt.gwa(r.gwa, r.gwa_scale))}</td><td>${standingBadge(r.standing)}</td><td>${esc(IskoFmt.date(r.date_recorded))}</td>
+    ${canCorrect ? `<td style="white-space:nowrap;"><a class="link-action" href="#" onclick="event.preventDefault(); openRecordCorrection(${r.id})">Correct</a> &nbsp;|&nbsp; <a class="link-action" style="color:var(--red-600);" href="#" onclick="event.preventDefault(); deleteRecord(${r.id})">Delete</a></td>` : ''}</tr>`).join('')
+    : `<tr><td colspan="7" class="text-sm text-muted">No academic records yet. Add the GWA from the scholar's academic report form.</td></tr>`;
+
+  // Stipends
+  const locked = S.status === 'terminated' || S.is_deactivated || S.is_anonymized;
+  const stBadge = x => x === 'Released' ? 'badge-green' : x === 'Pending' ? 'badge-amber' : 'badge-red';
+  $('stipend-history-body').innerHTML = S.stipends.length ? S.stipends.map(r => `
+    <tr><td>${esc(r.period)}</td><td>${esc(IskoFmt.peso(r.amount))}</td><td>${esc(IskoFmt.date(r.date_released))}</td>
+    <td><span class="badge ${stBadge(r.status)}">${esc(r.status)}</span></td><td class="text-sm text-muted">${esc(r.remarks || '')}</td>
+    <td style="white-space:nowrap;">${locked ? '' : `<a class="link-action" href="#" onclick="event.preventDefault(); openStipend(${r.id})">Edit</a>${role === 'admin' ? ` &nbsp;|&nbsp; <a class="link-action" style="color:var(--red-600);" href="#" onclick="event.preventDefault(); deleteStipend(${r.id})">Delete</a>` : ''}`}</td></tr>`).join('')
+    : `<tr><td colspan="6" class="text-sm text-muted">No disbursement records yet.</td></tr>`;
+
+  // Graduation
+  const g = S.graduation || {};
+  $('grad-expected').textContent = g.expected_graduation ? IskoFmt.month(g.expected_graduation) : 'Not set';
+  $('grad-actual').textContent = g.actual_graduation ? IskoFmt.dateLong(g.actual_graduation) : (S.status === 'terminated' ? 'N/A (terminated)' : 'Not yet graduated');
+  const gTone = { 'On Track': 'green', 'At Risk of Delay': 'amber', 'Delayed': 'red', 'Graduated': 'blue' }[g.status] || 'gray';
+  $('grad-status').innerHTML = `<span class="badge badge-${gTone}">${esc(S.status === 'terminated' ? 'Terminated' : g.status || '—')}</span>`;
+  $('grad-delay-reason').textContent = g.delay_reason || '—';
+
+  applyRecordLock(locked);
+  renderTermination();
+  $('doc-count').textContent = S.documents;
+  $('admin-more-wrap').hidden = role !== 'admin';
+  $('anonymized-banner').style.display = S.is_anonymized ? 'flex' : 'none';
+  if (S.is_anonymized) {
+    $('anonymized-text').textContent = `Personal details were removed on ${IskoFmt.date(S.anonymized_at)} under the data retention rule. The academic and stipend history is kept without identity for statistics, and the record can no longer be changed.`;
+    ['btn-edit-profile', 'btn-print', 'btn-add-document'].forEach(id => $(id).style.display = 'none');
+    document.querySelectorAll('.btn[onclick*="edit-personal-modal"], .btn[onclick*="edit-academic-bg-modal"], .btn[onclick*="edit-scholarship-modal"]').forEach(b => b.style.display = 'none');
+  }
+  if (document.getElementById('evidence-list')) loadDocuments(true);
+}
+
+function applyRecordLock(isLocked) {
+  ['academic', 'stipend', 'graduation'].forEach(section => {
+    const btn = $(section === 'graduation' ? 'btn-edit-graduation' : 'btn-add-' + section);
+    $('lock-icon-' + section).style.display = isLocked ? 'inline' : 'none';
+    $('lock-notice-' + section).style.display = isLocked ? 'flex' : 'none';
+    if (btn) btn.style.display = isLocked ? 'none' : 'inline-flex';
+  });
+  document.querySelectorAll('.btn[onclick*="edit-personal-modal"], .btn[onclick*="edit-academic-bg-modal"], .btn[onclick*="edit-scholarship-modal"], .av-banner-back')
+    .forEach(b => b.style.display = S.is_deactivated ? 'none' : '');
+}
+
+function renderTermination() {
+  const eligible = $('termination-eligible-card');
+  const card = $('termination-review-card');
+  const t = S.termination;
+  const fmtDate = d => IskoFmt.dateLong(d);
+
+  const showEligible = role === 'officer' && S.eligible_for_termination_recommendation;
+  eligible.style.display = showEligible ? 'block' : 'none';
+  if (showEligible) {
+    const why = S.below_requirement_two_semesters
+      ? 'The latest two semesters are both below the GWA requirement for this scholar\'s year level.'
+      : `The latest GWA puts this scholar on ${esc(S.academic_standing)}.`;
+    const returned = t.returned && (!t.pending) ? `<div class="text-sm" style="margin-top:8px;"><strong>Your last request was returned:</strong> ${esc(t.returned.review_remarks)}</div>` : '';
+    eligible.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+        <div style="flex:1; min-width:280px;">
+          <div class="text-sm text-muted" style="font-weight:700; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation" style="color:var(--amber-500);"></i> Eligible for termination recommendation</div>
+          <div class="text-sm text-muted" style="line-height:1.6;">${why} If interventions have not resolved the issue, you may recommend this case for Administrator review.</div>${returned}
+        </div>
+        <button class="btn btn-danger" onclick="openRecommend()"><i class="fa-solid fa-triangle-exclamation"></i> Recommend for Termination</button>
+      </div>`;
+  }
+
+  card.style.display = 'none';
+  card.style.borderLeftColor = '';
+  card.style.background = '';
+  if (S.status === 'pending_termination' && t.pending) {
+    const r = t.pending;
+    card.style.display = 'block';
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+        <div style="flex:1; min-width:280px;">
+          <div class="text-sm text-muted" style="font-weight:700; margin-bottom:6px;"><i class="fa-solid fa-triangle-exclamation" style="color:var(--red-500);"></i> Termination recommendation: pending Administrator review</div>
+          <div class="text-sm" style="margin-bottom:10px;"><strong>Grounds:</strong> ${esc(r.grounds)}</div>
+          <div class="text-sm text-muted" style="line-height:1.6; margin-bottom:10px; white-space:pre-line;">${esc(r.notes)}</div>
+          <div class="text-sm text-muted">Recommended by <strong>${esc(r.requested_by)}</strong>, ${esc(IskoFmt.dateTime(r.requested_at))}. Proposed effective date: <strong>${esc(fmtDate(r.proposed_effective_date))}</strong></div>
+          <div class="text-sm" id="evidence-list" data-request="${r.id}" style="margin-top:8px;"></div>
+        </div>
+        <div style="display:flex; gap:10px; flex-shrink:0; align-items:center;">${role === 'admin'
+          ? `<button class="btn btn-outline" onclick="openModal('return-request-modal')">Return for More Info</button><button class="btn btn-danger" onclick="approveTermination(${r.id})">Approve Termination</button>`
+          : `<span class="badge badge-amber">Awaiting Administrator review</span>${r.requested_by_id === user.id ? `<button class="btn btn-outline btn-sm" onclick="withdrawRecommendation(${r.id})">Withdraw</button>` : ''}`}</div>
+      </div>`;
+  } else if (S.status === 'terminated' && t.approved) {
+    const r = t.approved;
+    card.style.display = 'block';
+    card.style.borderLeftColor = 'var(--gray-400)';
+    card.innerHTML = `
+      <div class="text-sm text-muted" style="font-weight:700; margin-bottom:6px;"><i class="fa-solid fa-circle-check" style="color:var(--gray-500);"></i> Termination approved</div>
+      <div class="text-sm" style="margin-bottom:10px;"><strong>Grounds:</strong> ${esc(r.grounds)}</div>
+      <div class="text-sm text-muted" style="line-height:1.6; margin-bottom:10px; white-space:pre-line;">${esc(r.notes)}</div>
+      <div class="text-sm text-muted">Recommended by <strong>${esc(r.requested_by)}</strong>, ${esc(IskoFmt.date(r.requested_at))}. Approved by <strong>${esc(r.reviewed_by)}</strong>, ${esc(IskoFmt.date(r.reviewed_at))}. Effective ${esc(fmtDate(r.proposed_effective_date))}.</div>
+      ${role === 'admin' ? `<div style="margin-top:14px;"><button class="btn btn-outline" onclick="reinstateScholar()"><i class="fa-solid fa-rotate-left"></i> Reinstate Scholar</button> <span class="text-sm text-muted">&nbsp;Use only after an approved appeal or a decision reversal.</span></div>` : ''}`;
+  } else if (t.reversed && S.status !== 'terminated') {
+    const r = t.reversed;
+    card.style.display = 'block';
+    card.style.borderLeftColor = 'var(--blue-500)';
+    card.style.background = 'var(--blue-50)';
+    card.innerHTML = `
+      <div class="text-sm text-muted" style="font-weight:700; margin-bottom:6px;"><i class="fa-solid fa-rotate-left" style="color:var(--blue-500);"></i> Termination reversed: scholar reinstated</div>
+      <div class="text-sm" style="margin-bottom:8px;"><strong>Basis:</strong> ${esc(r.reversal_remarks)}</div>
+      <div class="text-sm text-muted">Reinstated by <strong>${esc(r.reversed_by)}</strong>, ${esc(IskoFmt.dateTime(r.reversed_at))}. The original termination (${esc(r.grounds)}) was approved by ${esc(r.reviewed_by)} on ${esc(IskoFmt.date(r.reviewed_at))}.</div>`;
+  }
+}
+
+/* ---------- Section edits (modals) ---------- */
+const SECTION_FIELDS = {
+  personal: { gender: 'ep-gender', birth_date: 'ep-dob', mobile_number: 'ep-mobile', email: 'ep-email' },
+  background: { hei: 'eb-hei', degree_program: 'eb-degree', year_level: 'eb-year', municipality: 'eb-muni', secondary_school: 'eb-school' },
+  scholarship: { program: 'es-program', cycle: 'es-cycle', enrollment_date: 'es-enroll' }
+};
+const SECTION_MODAL = { personal: 'edit-personal-modal', background: 'edit-academic-bg-modal', scholarship: 'edit-scholarship-modal' };
+
+function schoolsFor(mid) {
+  const list = LK.schools.filter(x => String(x.municipality_id) === String(mid));
+  // Keep the scholar's own school selectable even if it was deactivated later.
+  if (S && String(mid) === String(S.municipality_id) && !list.some(x => x.id === S.secondary_school_id))
+    list.unshift({ id: S.secondary_school_id, name: S.secondary_school + ' (inactive)' });
+  return list;
+}
+const withCurrent = (list, id, name, key = 'name') =>
+  list.some(x => x.id === id) ? list : [{ id, [key]: name + ' (inactive)' }].concat(list);
+
+function prefillModals() {
+  $('ep-gender').value = S.gender; $('ep-dob').value = S.birth_date; $('ep-mobile').value = S.mobile_number; $('ep-email').value = S.email || '';
+  IskoAPI.fillSelect('eb-hei', withCurrent(LK.heis, S.hei_id, S.hei), null, S.hei_id);
+  $('eb-degree').value = S.degree_program;
+  IskoAPI.fillSelect('eb-year', LK.year_levels, null, S.year_level, 'label', 'value');
+  IskoAPI.fillSelect('eb-muni', LK.municipalities, null, S.municipality_id);
+  IskoAPI.fillSelect('eb-school', schoolsFor(S.municipality_id), 'Select school', S.secondary_school_id);
+  IskoAPI.fillSelect('es-program', withCurrent(LK.programs, S.program_id, S.program), null, S.program_id);
+  IskoAPI.fillSelect('es-cycle', withCurrent(LK.cycles, S.cycle_id, S.cycle, 'label'), null, S.cycle_id, 'label');
+  $('es-enroll').value = S.enrollment_date;
+}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('[onclick*="openModal(\'edit-"]');
+  if (btn && S) prefillModals();
+}, true);
+$('eb-muni').addEventListener('change', () => IskoAPI.fillSelect('eb-school', schoolsFor(v('eb-muni')), 'Select school'));
+
+async function saveSection(section) {
+  const map = SECTION_FIELDS[section];
+  IskoAPI.clearFieldErrors(map);
+  const body = {};
+  Object.entries(map).forEach(([k, id]) => body[k] = v(id));
+  try {
+    const res = await IskoAPI.patch('/api/scholars/' + encodeURIComponent(CODE), body);
+    S = res.scholar;
+    closeModal(SECTION_MODAL[section]);
+    render();
+    showToast('Changes saved', 'The scholar record was updated.');
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Changes not saved'); }
+}
+
+/* ---------- Full edit view ---------- */
+const EV_REQUIRED = ['ev-gender','ev-dob','ev-cycle','ev-muni','ev-school','ev-enroll','ev-hei','ev-degree','ev-year'];
+const EV_MAP = { gender: 'ev-gender', birth_date: 'ev-dob',
+  cycle: 'ev-cycle', municipality: 'ev-muni', secondary_school: 'ev-school', enrollment_date: 'ev-enroll', hei: 'ev-hei',
+  degree_program: 'ev-degree', year_level: 'ev-year' };
+const EV_ERR = id => $(id.replace('ev-', 'ev-err-'));
+
+function evAgeHint() {
+  const val = v('ev-dob');
+  $('ev-hint-age').textContent = val ? 'Age: ' + Math.floor((Date.now() - new Date(val)) / (365.25 * 86400000)) + ' years old' : '';
+}
+function evSetStep(n, state) {
+  const el = $('ev-step-' + n);
+  el.classList.remove('done', 'current');
+  if (state) el.classList.add(state);
+  el.querySelector('.ev-step-dot').innerHTML = state === 'done' ? '<i class="fas fa-check" style="font-size:10px;"></i>' : n;
+}
+function evUpdateProgress() {
+  const filled = EV_REQUIRED.filter(id => v(id) !== '').length;
+  const pct = Math.round(filled / EV_REQUIRED.length * 100);
+  $('ev-progress-bar').style.width = pct + '%';
+  $('ev-progress-pct').textContent = pct + '%';
+  $('ev-progress-label').textContent = `${filled} of ${EV_REQUIRED.length} required fields filled`;
+  const s1 = ['ev-gender','ev-dob'].every(v);
+  const s2 = ['ev-cycle','ev-muni','ev-school','ev-enroll'].every(v);
+  const s3 = ['ev-hei','ev-degree','ev-year'].every(v);
+  evSetStep(1, s1 ? 'done' : 'current');
+  evSetStep(2, s2 ? 'done' : (s1 ? 'current' : ''));
+  evSetStep(3, s3 ? 'done' : (s2 ? 'current' : ''));
+}
+function openEditView() {
+  if (!S || S.is_deactivated) return;
+  IskoAPI.fillSelect('ev-cycle', withCurrent(LK.cycles, S.cycle_id, S.cycle, 'label'), 'Select cycle', S.cycle_id, 'label');
+  IskoAPI.fillSelect('ev-muni', LK.municipalities, 'Select municipality', S.municipality_id);
+  IskoAPI.fillSelect('ev-school', schoolsFor(S.municipality_id), 'Select secondary school', S.secondary_school_id);
+  IskoAPI.fillSelect('ev-hei', withCurrent(LK.heis, S.hei_id, S.hei), 'Select HEI', S.hei_id);
+  IskoAPI.fillSelect('ev-year', LK.year_levels, 'Select year level', S.year_level, 'label', 'value');
+  $('ev-gender').value = S.gender; $('ev-dob').value = S.birth_date; $('ev-enroll').value = S.enrollment_date; $('ev-degree').value = S.degree_program;
+  evAgeHint();
+  evUpdateProgress();
+  document.querySelector('.page-body').classList.add('is-editing');
+  window.scrollTo(0, 0);
+}
+function closeEditView() {
+  document.querySelector('.page-body').classList.remove('is-editing');
+  EV_REQUIRED.forEach(id => { $(id).classList.remove('error', 'success'); EV_ERR(id).classList.remove('visible'); });
+  IskoAPI.clearFieldErrors(EV_MAP);
+  window.scrollTo(0, 0);
+}
+async function submitEditProfile() {
+  let ok = true;
+  EV_REQUIRED.forEach(id => {
+    const good = v(id) !== '';
+    $(id).classList.toggle('error', !good); $(id).classList.toggle('success', good);
+    EV_ERR(id).classList.toggle('visible', !good);
+    if (!good) ok = false;
+  });
+  if (!ok) { const first = document.querySelector('#edit-view .ev-control.error'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  IskoAPI.clearFieldErrors(EV_MAP);
+  const body = {};
+  Object.entries(EV_MAP).forEach(([k, id]) => body[k] = v(id));
+  try {
+    const res = await IskoAPI.patch('/api/scholars/' + encodeURIComponent(CODE), body);
+    S = res.scholar;
+    closeEditView();
+    render();
+    showToast('Scholar record saved', 'All changes were saved.');
+  } catch (err) { IskoAPI.showFieldErrors(err, EV_MAP); IskoAPI.fail(err, 'Changes not saved'); }
+}
+EV_REQUIRED.forEach(id => { $(id).addEventListener('input', evUpdateProgress); $(id).addEventListener('change', evUpdateProgress); });
+$('ev-dob').addEventListener('change', evAgeHint);
+$('ev-muni').addEventListener('change', () => IskoAPI.fillSelect('ev-school', schoolsFor(v('ev-muni')), 'Select secondary school'));
+
+/* ---------- Add academic performance record ---------- */
+const AV_ERR = { 'av-year': 'av-err-year', 'av-sem': 'av-err-sem', 'av-gwa': 'av-err-gwa', 'av-date': 'av-err-date' };
+
+/* Same rule as the backend (standing.py), using the thresholds it sends,
+   so the preview always matches what will be saved. */
+function previewStanding(gwa, level) {
+  const rule = LK.standing_rule;
+  const scale = gwa >= 1 && gwa <= 5 ? 'grade' : gwa >= 50 && gwa <= 100 ? 'percent' : null;
+  if (!scale) return null;
+  const lower = rule.lower_year_levels.includes(Number(level));
+  const t = rule[scale];
+  const required = lower ? t.required_lower_years : t.passing;
+  let standing;
+  if (scale === 'grade') standing = gwa <= required ? 'Good Standing' : gwa <= t.passing ? 'Probation' : 'Failed';
+  else standing = gwa >= required ? 'Good Standing' : gwa >= t.passing ? 'Probation' : 'Failed';
+  return { scale, standing, required, passing: t.passing, lower };
+}
+
+function updateScaleLabels(level, scale) {
+  const rule = LK.standing_rule;
+  const lower = rule.lower_year_levels.includes(Number(level));
+  const t = rule[scale || 'grade'];
+  const isGrade = (scale || 'grade') === 'grade';
+  const fmt = x => isGrade ? Number(x).toFixed(2) : x + '%';
+  if (lower) {
+    $('av-seg-good').textContent = isGrade ? `GWA ≤ ${fmt(t.required_lower_years)}` : `≥ ${fmt(t.required_lower_years)}`;
+    $('av-seg-prob').textContent = isGrade ? `${fmt(t.required_lower_years + 0.01)} – ${fmt(t.passing)}` : `${fmt(t.passing)} – ${fmt(t.required_lower_years - 0.01)}`;
+  } else {
+    $('av-seg-good').textContent = isGrade ? `GWA ≤ ${fmt(t.passing)}` : `≥ ${fmt(t.passing)}`;
+    $('av-seg-prob').textContent = 'Not used for 3rd year+';
+  }
+  $('av-seg-fail').textContent = isGrade ? `GWA > ${fmt(t.passing)}` : `< ${fmt(t.passing)}`;
+}
+
+function avUpdateGWA() {
+  const raw = $('av-gwa').value, gwa = parseFloat(raw);
+  const display = $('av-gwa-value'), chipEl = $('av-gwa-chip'), standing = $('av-standing'), needle = $('av-needle');
+  const segs = document.querySelectorAll('#av-scale .av-seg');
+  segs.forEach(x => x.classList.add('inactive'));
+  const res = raw ? previewStanding(gwa, v('av-level')) : null;
+  updateScaleLabels(v('av-level'), res ? res.scale : 'grade');
+  if (!res) {
+    display.textContent = '—'; display.style.color = 'var(--text-900)';
+    chipEl.className = 'av-gwa-label empty'; chipEl.innerHTML = '<i class="fas fa-minus"></i>&nbsp;Not Entered';
+    standing.value = ''; needle.setAttribute('transform', 'rotate(-90 65 65)');
+    return;
+  }
+  display.textContent = res.scale === 'grade' ? gwa.toFixed(2) : gwa.toFixed(2) + '%';
+  const pos = res.scale === 'grade' ? (gwa - 1) / 4 : (100 - gwa) / 50;   // left = best grade
+  needle.setAttribute('transform', `rotate(${pos * 180 - 90} 65 65)`);
+  standing.value = res.standing;
+  const look = { 'Good Standing': ['var(--green)', 'good', 'fa-check-circle', 0], 'Probation': ['var(--amber)', 'prob', 'fa-exclamation-triangle', 1], 'Failed': ['var(--red)', 'fail', 'fa-times-circle', 2] }[res.standing];
+  display.style.color = look[0];
+  chipEl.className = 'av-gwa-label ' + look[1];
+  chipEl.innerHTML = `<i class="fas ${look[2]}"></i>&nbsp;${res.standing}`;
+  segs[look[3]].classList.remove('inactive');
+}
+
+function avRenderHistory() {
+  const color = st => st === 'Good Standing' ? 'var(--green)' : st === 'Probation' ? 'var(--amber)' : 'var(--red)';
+  const tone = st => st === 'Good Standing' ? 'green' : st === 'Probation' ? 'amber' : 'red';
+  const rows = S.academic_records.map(r => `
+    <div class="av-hp-row"><span class="av-hp-period">${esc(r.academic_year)} &nbsp;${esc(r.semester.replace('Semester', 'Sem'))}</span>
+      <span class="av-hp-gwa" style="color:${color(r.standing)};">${esc(IskoFmt.gwa(r.gwa, r.gwa_scale))}</span>
+      <span class="badge badge-${tone(r.standing)}" style="font-size:10.5px;">${esc(r.standing === 'Good Standing' ? 'Good' : r.standing)}</span></div>`).join('');
+  const label = (v('av-year') || 'New record') + (v('av-sem') ? ' &nbsp;' + esc(v('av-sem').replace('Semester', 'Sem')) : '');
+  $('av-history-rows').innerHTML = (rows || '<div class="av-hp-row text-sm text-muted">No earlier records</div>') + `
+    <div class="av-hp-row" style="background:rgba(0,48,135,.02);"><span class="av-hp-period" style="font-weight:700;color:var(--navy);">${label}</span>
+      <span class="av-hp-gwa" style="color:var(--text-400);">Encoding now…</span><span class="badge badge-gray" style="font-size:10.5px;">Pending</span></div>`;
+}
+
+function openAcadView() {
+  if (!S) return;
+  const copy = (to, from) => { $(to).textContent = $(from).textContent; };
+  $('av-b-name').textContent = $('profile-name').textContent;
+  copy('av-b-location', 'profile-municipality'); copy('av-b-email', 'profile-email'); copy('av-b-phone', 'profile-phone');
+  copy('av-b-gwa', 'stat-gwa'); copy('av-b-year', 'stat-year'); copy('av-b-stipends', 'stat-stipends'); copy('av-b-program', 'stat-program');
+  chip($('av-b-status'), $('profile-status').textContent, statusTone(S.status));
+  chip($('av-b-risk'), S.academic_standing || 'No GWA record yet', standingTone(S.academic_standing));
+  $('av-scholar').value = S.code;
+  $('av-link-note').textContent = 'This record will be linked to scholar ' + S.code;
+  const now = new Date();
+  const ayStart = now.getMonth() >= 5 ? now.getFullYear() : now.getFullYear() - 1;   // academic year starts in June
+  const currentAY = `${ayStart}-${ayStart + 1}`;
+  IskoAPI.fillSelect('av-year', LK.cycles, 'Select academic year', LK.cycles.some(c => c.label === currentAY) ? currentAY : '', 'label', 'label');
+  IskoAPI.fillSelect('av-level', LK.year_levels, null, S.year_level, 'label', 'value');
+  $('av-sem').value = ''; $('av-gwa').value = ''; $('av-date').value = new Date().toISOString().slice(0, 10);
+  $('av-date').max = new Date().toISOString().slice(0, 10);
+  Object.keys(AV_ERR).forEach(id => { $(id).classList.remove('error'); $(AV_ERR[id]).classList.remove('visible'); });
+  avUpdateGWA();
+  avRenderHistory();
+  document.querySelector('.page-body').classList.add('is-adding-academic');
+  window.scrollTo(0, 0);
+}
+function closeAcadView() { document.querySelector('.page-body').classList.remove('is-adding-academic'); window.scrollTo(0, 0); }
+
+async function submitAcadRecord() {
+  let ok = true;
+  const mark = (id, valid) => { $(id).classList.toggle('error', !valid); $(AV_ERR[id]).classList.toggle('visible', !valid); if (!valid) ok = false; };
+  const g = parseFloat($('av-gwa').value);
+  mark('av-year', v('av-year') !== '');
+  mark('av-sem', v('av-sem') !== '');
+  mark('av-gwa', !isNaN(g) && previewStanding(g, v('av-level')) !== null);
+  mark('av-date', v('av-date') !== '');
+  if (!ok) { const first = document.querySelector('#acad-view .ev-control.error'); if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+  try {
+    const res = await IskoAPI.post(`/api/scholars/${encodeURIComponent(CODE)}/academic-records`, {
+      academic_year: v('av-year'), semester: v('av-sem'), gwa: g, year_level_at_record: v('av-level'), date_recorded: v('av-date') });
+    S = res.scholar;
+    closeAcadView();
+    render();
+    switchTab('academic');
+    const below = S.below_requirement_two_semesters ? ' This is the second consecutive semester below the requirement; officers and Administrators were notified.' : '';
+    showToast('Record added', `${res.record.semester} ${res.record.academic_year}: ${res.record.standing}.${below}`, res.record.standing === 'Good Standing' ? 'success' : 'warning');
+  } catch (err) {
+    if (err.fieldErrors.semester) { $('av-err-sem').innerHTML = '<i class="fas fa-exclamation-circle"></i>' + esc(err.fieldErrors.semester); mark('av-sem', false); }
+    IskoAPI.fail(err, 'Record not saved');
+  }
+}
+$('av-gwa').addEventListener('input', avUpdateGWA);
+$('av-level').addEventListener('change', avUpdateGWA);
+['av-year', 'av-sem'].forEach(id => $(id).addEventListener('change', avRenderHistory));
+
+/* ---------- Stipends ---------- */
+const ST_MAP = { period: 'st-period', amount: 'st-amount', status: 'st-status', date_released: 'st-date', remarks: 'st-remarks' };
+function openStipend(id) {
+  const r = id ? S.stipends.find(x => x.id === id) : null;
+  editingStipendId = r ? r.id : null;
+  $('st-title').textContent = r ? 'Edit Disbursement Record' : 'Add Disbursement Record';
+  $('st-period').value = r ? r.period : '';
+  $('st-amount').value = r ? r.amount : '';
+  $('st-status').value = r ? r.status : 'Released';
+  $('st-date').value = r ? (r.date_released || '') : '';
+  $('st-date').max = new Date().toISOString().slice(0, 10);
+  $('st-remarks').value = r ? (r.remarks || '') : '';
+  IskoAPI.clearFieldErrors(ST_MAP);
+  openModal('add-stipend-modal');
+}
+$('btn-add-stipend').setAttribute('onclick', 'openStipend()');
+async function saveStipend() {
+  IskoAPI.clearFieldErrors(ST_MAP);
+  const body = {};
+  Object.entries(ST_MAP).forEach(([k, id]) => body[k] = v(id));
+  try {
+    const url = `/api/scholars/${encodeURIComponent(CODE)}/stipends` + (editingStipendId ? '/' + editingStipendId : '');
+    const res = editingStipendId ? await IskoAPI.patch(url, body) : await IskoAPI.post(url, body);
+    S = res.scholar;
+    closeModal('add-stipend-modal');
+    render();
+    showToast(editingStipendId ? 'Record updated' : 'Record added', 'Disbursement record saved.');
+  } catch (err) { IskoAPI.showFieldErrors(err, ST_MAP); IskoAPI.fail(err, 'Record not saved'); }
+}
+
+/* ---------- Graduation ---------- */
+const GR_MAP = { expected_graduation: 'gr-expected', status: 'gr-status', actual_graduation: 'gr-actual', delay_reason: 'gr-reason' };
+function syncGradFields() {
+  const st = v('gr-status');
+  $('gr-actual-wrap').style.display = st === 'Graduated' ? 'block' : 'none';
+  $('gr-reason-wrap').style.display = (st === 'At Risk of Delay' || st === 'Delayed') ? 'block' : 'none';
+}
+$('btn-edit-graduation').setAttribute('onclick', 'openGraduation()');
+function openGraduation() {
+  const g = S.graduation || {};
+  $('gr-expected').value = g.expected_graduation || '';
+  $('gr-status').value = g.status || 'On Track';
+  $('gr-actual').value = g.actual_graduation || '';
+  $('gr-actual').max = new Date().toISOString().slice(0, 10);
+  $('gr-reason').value = g.delay_reason || '';
+  IskoAPI.clearFieldErrors(GR_MAP);
+  syncGradFields();
+  openModal('edit-graduation-modal');
+}
+$('gr-status').addEventListener('change', syncGradFields);
+async function saveGraduation() {
+  IskoAPI.clearFieldErrors(GR_MAP);
+  const body = {};
+  Object.entries(GR_MAP).forEach(([k, id]) => body[k] = v(id));
+  try {
+    const res = await IskoAPI.put(`/api/scholars/${encodeURIComponent(CODE)}/graduation`, body);
+    S = res.scholar;
+    closeModal('edit-graduation-modal');
+    render();
+    showToast('Record updated', 'Graduation record saved.');
+  } catch (err) { IskoAPI.showFieldErrors(err, GR_MAP); IskoAPI.fail(err, 'Record not saved'); }
+}
+
+/* ---------- Termination workflow ---------- */
+function openRecommend() {
+  IskoAPI.fillSelect('rt-grounds', LK.termination_grounds, 'Select grounds');
+  if (S.below_requirement_two_semesters) $('rt-grounds').value = LK.termination_grounds[0];
+  $('rt-date').min = new Date().toISOString().slice(0, 10);
+  openDrawer('recommend-termination-drawer');
+}
+async function submitTerminationRecommendation() {
+  const map = { grounds: 'rt-grounds', notes: 'rt-notes', proposed_effective_date: 'rt-date' };
+  IskoAPI.clearFieldErrors(map);
+  try {
+    const res = await IskoAPI.post(`/api/scholars/${encodeURIComponent(CODE)}/termination-requests`,
+      { grounds: v('rt-grounds'), notes: v('rt-notes'), proposed_effective_date: v('rt-date') });
+    S = res.scholar;
+    const files = Array.from($('rt-files').files || []);
+    let failed = 0;
+    for (const f of files) {
+      try { await sendDocument(f, 'Termination evidence', 'Attached to the termination recommendation', S.termination.pending.id); }
+      catch (e) { failed++; }
+    }
+    closeDrawer('recommend-termination-drawer');
+    $('rt-notes').value = ''; $('rt-date').value = ''; $('rt-files').value = '';
+    S = (await IskoAPI.get('/api/scholars/' + encodeURIComponent(CODE))).scholar;
+    render();
+    showToast('Recommendation submitted', `Sent to the Administrator for review.${files.length ? ` ${files.length - failed} evidence file(s) attached.` : ''}${failed ? ` ${failed} file(s) could not be uploaded; add them in the Documents tab.` : ''}`, failed ? 'error' : 'warning');
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Recommendation not sent'); }
+}
+function approveTermination(id) {
+  confirmAction('Approve this termination? The scholar becomes Terminated and their academic, stipend and graduation records are locked.', async () => {
+    try {
+      const res = await IskoAPI.post(`/api/termination-requests/${id}/approve`, {});
+      S = res.scholar; render();
+      showToast('Termination approved', `Scholar ${S.code}'s scholarship was terminated and logged in the audit log.`, 'error');
+    } catch (err) { IskoAPI.fail(err); }
+  });
+}
+async function submitReturn() {
+  IskoAPI.clearFieldErrors({ remarks: 'rr-remarks' });
+  try {
+    const res = await IskoAPI.post(`/api/termination-requests/${S.termination.pending.id}/return`, { remarks: v('rr-remarks') });
+    S = res.scholar;
+    closeModal('return-request-modal');
+    $('rr-remarks').value = '';
+    render();
+    showToast('Request returned', 'The officer was notified. The scholar is Active again.', 'warning');
+  } catch (err) { IskoAPI.showFieldErrors(err, { remarks: 'rr-remarks' }); IskoAPI.fail(err); }
+}
+
+
+/* ---------- Reason prompt (deletes, withdrawals, reinstatement) ----------
+   Opens a small dialog that asks for a reason, sends it, and keeps the dialog
+   open with the server's message if it is not accepted. */
+function closeReason() { closeModal('reason-modal'); }
+function withReason([title, message, label, placeholder, confirmLabel, tone], call, onDone) {
+  $('rm-title').textContent = title;
+  $('rm-message').textContent = message;
+  $('rm-label').innerHTML = esc(label) + ' <span class="required">*</span>';
+  $('rm-text').value = '';
+  $('rm-text').placeholder = placeholder;
+  const btn = $('rm-confirm');
+  btn.textContent = confirmLabel;
+  btn.className = 'btn ' + (tone === 'primary' ? 'btn-primary' : 'btn-danger');
+  btn.disabled = false;
+  IskoAPI.clearFieldErrors({ reason: 'rm-text' });
+  btn.onclick = async () => {
+    btn.disabled = true;
+    IskoAPI.clearFieldErrors({ reason: 'rm-text' });
+    try {
+      const res = await call($('rm-text').value.trim());
+      closeReason();
+      onDone(res);
+    } catch (err) {
+      const msg = Object.values(err.fieldErrors || {})[0] || err.message;
+      IskoAPI.showFieldErrors({ fieldErrors: { reason: msg } }, { reason: 'rm-text' });
+    } finally { btn.disabled = false; }
+  };
+  openModal('reason-modal');
+  setTimeout(() => $('rm-text').focus(), 50);
+}
+
+/* ---------- Academic record corrections (Administrator) ---------- */
+let correctingId = null;
+const ER_MAP = { academic_year: 'er-year', semester: 'er-sem', gwa: 'er-gwa', year_level_at_record: 'er-level', date_recorded: 'er-date', reason: 'er-reason' };
+function erPreview() {
+  const g = parseFloat($('er-gwa').value);
+  const res = isNaN(g) ? null : previewStanding(g, v('er-level'));
+  $('er-preview').textContent = res ? 'New standing: ' + res.standing : 'Enter 1.00 to 5.00, or 50 to 100 for a percentage.';
+}
+function openRecordCorrection(id) {
+  const r = S.academic_records.find(x => x.id === id);
+  correctingId = id;
+  IskoAPI.fillSelect('er-year', LK.cycles.some(c => c.label === r.academic_year) ? LK.cycles : [{ label: r.academic_year }].concat(LK.cycles), null, r.academic_year, 'label', 'label');
+  $('er-sem').value = r.semester;
+  $('er-gwa').value = r.gwa;
+  IskoAPI.fillSelect('er-level', LK.year_levels, null, r.year_level_at_record, 'label', 'value');
+  $('er-date').value = r.date_recorded;
+  $('er-date').max = new Date().toISOString().slice(0, 10);
+  $('er-reason').value = '';
+  IskoAPI.clearFieldErrors(ER_MAP);
+  erPreview();
+  openModal('edit-record-modal');
+}
+$('er-gwa').addEventListener('input', erPreview);
+$('er-level').addEventListener('change', erPreview);
+async function saveRecordCorrection() {
+  IskoAPI.clearFieldErrors(ER_MAP);
+  const body = {};
+  Object.entries(ER_MAP).forEach(([k, id]) => body[k] = v(id));
+  try {
+    const res = await IskoAPI.patch(`/api/scholars/${encodeURIComponent(CODE)}/academic-records/${correctingId}`, body);
+    S = res.scholar;
+    closeModal('edit-record-modal');
+    render();
+    showToast('Record corrected', `${res.record.semester} ${res.record.academic_year}: ${res.record.standing}. The change is in the audit log.`);
+  } catch (err) { IskoAPI.showFieldErrors(err, ER_MAP); IskoAPI.fail(err, 'Correction not saved'); }
+}
+function deleteRecord(id) {
+  const r = S.academic_records.find(x => x.id === id);
+  withReason(['Delete academic record', `Delete the ${r.semester} ${r.academic_year} record (GWA ${IskoFmt.gwa(r.gwa, r.gwa_scale)})? The standing is recalculated from the remaining records.`,
+    'Reason for deleting', 'e.g. Encoded twice for the same term', 'Delete Record'],
+    text => IskoAPI.request('DELETE', `/api/scholars/${encodeURIComponent(CODE)}/academic-records/${id}`, { reason: text }),
+    res => { S = res.scholar; render(); showToast('Record deleted', 'The deletion and your reason are in the audit log.', 'warning'); });
+}
+function deleteStipend(id) {
+  const r = S.stipends.find(x => x.id === id);
+  withReason(['Delete disbursement record', `Delete the ${r.period} record (${IskoFmt.peso(r.amount)}, ${r.status})?`,
+    'Reason for deleting', 'e.g. Saved under the wrong scholar', 'Delete Record'],
+    text => IskoAPI.request('DELETE', `/api/scholars/${encodeURIComponent(CODE)}/stipends/${id}`, { reason: text }),
+    res => { S = res.scholar; render(); showToast('Record deleted', 'The deletion and your reason are in the audit log.', 'warning'); });
+}
+
+/* ---------- Withdraw / reinstate ---------- */
+function withdrawRecommendation(id) {
+  withReason(['Withdraw recommendation', 'The scholar goes back to Active and the Administrator is notified.',
+    'Reason for withdrawing', 'e.g. Filed for the wrong scholar', 'Withdraw', 'primary'],
+    text => IskoAPI.post(`/api/termination-requests/${id}/withdraw`, { reason: text }),
+    res => { S = res.scholar; render(); showToast('Recommendation withdrawn', 'The scholar is Active again.'); });
+}
+function reinstateScholar() {
+  withReason(['Reinstate scholar', 'This reverses the approved termination. The scholar becomes Active (or Graduated if their graduation record says so), and their records unlock. The original approval stays on file.',
+    'Basis for reinstatement', 'e.g. Appeal approved by the DOST-SEI Director on 15 Jan 2027, memo no. ...', 'Reinstate', 'primary'],
+    text => IskoAPI.post(`/api/scholars/${encodeURIComponent(CODE)}/reinstate`, { remarks: text }),
+    res => { S = res.scholar; render(); showToast('Scholar reinstated', 'The reversal is recorded in the audit log, and officers were notified.'); });
+}
+
+
+/* ---------- Documents ---------- */
+let DOC_TYPES = [];
+async function loadDocuments(evidenceOnly) {
+  try {
+    const res = await IskoAPI.get(`/api/scholars/${encodeURIComponent(CODE)}/documents`);
+    DOC_TYPES = res.types;
+    const docs = res.documents;
+    const base = `/api/scholars/${encodeURIComponent(CODE)}/documents/`;
+    const ev = document.getElementById('evidence-list');
+    if (ev) {
+      const linked = docs.filter(d => String(d.termination_request_id) === ev.dataset.request);
+      ev.innerHTML = linked.length ? '<strong>Evidence:</strong> ' + linked.map(d =>
+        `<a class="link-action" href="${base}${d.id}?inline=1" target="_blank" rel="noopener">${esc(d.filename)}</a>`).join(', ') : '';
+    }
+    if (evidenceOnly) return;
+    $('doc-count').textContent = docs.length;
+    $('documents-body').innerHTML = docs.length ? docs.map(d => `
+      <tr><td>${esc(d.doc_type)}</td>
+        <td><a class="link-action" href="${base}${d.id}?inline=1" target="_blank" rel="noopener"><i class="fa-solid ${d.mime_type === 'application/pdf' ? 'fa-file-pdf' : 'fa-file-image'}" aria-hidden="true"></i> ${esc(d.filename)}</a>
+          <div class="cell-sub">${(d.size_bytes / 1024).toFixed(0)} KB</div></td>
+        <td class="text-sm">${esc(d.description || '')}</td>
+        <td class="text-sm">${esc(IskoFmt.date(d.uploaded_at))}<div class="cell-sub">${esc(d.uploaded_by)}</div></td>
+        <td style="white-space:nowrap;"><a class="link-action" href="${base}${d.id}">Download</a>${role === 'admin' && !S.is_anonymized ? ` &nbsp;|&nbsp; <a class="link-action" style="color:var(--red-600);" href="#" onclick="event.preventDefault(); removeDocument(${d.id}, '${esc(d.filename)}')">Remove</a>` : ''}</td></tr>`).join('')
+      : '<tr><td colspan="5" class="text-sm text-muted">No documents uploaded yet.</td></tr>';
+  } catch (err) { if (!evidenceOnly) IskoAPI.fail(err, 'Could not load documents'); }
+}
+function sendDocument(file, type, description, requestId) {
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('doc_type', type);
+  if (description) fd.append('description', description);
+  if (requestId) fd.append('termination_request_id', requestId);
+  return IskoAPI.request('POST', `/api/scholars/${encodeURIComponent(CODE)}/documents`, fd);
+}
+async function openDocUpload() {
+  if (!DOC_TYPES.length) { try { DOC_TYPES = (await IskoAPI.get(`/api/scholars/${encodeURIComponent(CODE)}/documents`)).types; } catch (e) {} }
+  IskoAPI.fillSelect('dc-type', DOC_TYPES, 'Select type');
+  $('dc-file').value = ''; $('dc-desc').value = '';
+  IskoAPI.clearFieldErrors({ doc_type: 'dc-type', file: 'dc-file' });
+  openModal('doc-modal');
+}
+async function uploadDocument() {
+  const map = { doc_type: 'dc-type', file: 'dc-file' };
+  IskoAPI.clearFieldErrors(map);
+  const f = $('dc-file').files[0];
+  if (!f) { IskoAPI.showFieldErrors({ fieldErrors: { file: 'Choose a file.' } }, map); return; }
+  if (f.size > 10 * 1024 * 1024) { IskoAPI.showFieldErrors({ fieldErrors: { file: 'The file is larger than 10 MB.' } }, map); return; }
+  const btn = $('dc-submit'); btn.disabled = true;
+  try {
+    await sendDocument(f, v('dc-type'), v('dc-desc'));
+    closeModal('doc-modal');
+    showToast('Document uploaded', f.name);
+    loadDocuments();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Upload failed'); }
+  finally { btn.disabled = false; }
+}
+function removeDocument(id, name) {
+  withReason(['Remove document', `Remove "${name}"? The file is deleted from storage; the removal is kept in the audit log.`,
+    'Reason for removing', 'e.g. Uploaded for the wrong scholar', 'Remove'],
+    text => IskoAPI.request('DELETE', `/api/scholars/${encodeURIComponent(CODE)}/documents/${id}`, { reason: text }),
+    () => { showToast('Document removed', name, 'warning'); loadDocuments(); });
+}
+
+/* ---------- Print and data export ---------- */
+function printRecord() { window.open(`/api/scholars/${encodeURIComponent(CODE)}/record.pdf`, '_blank', 'noopener'); }
+function exportPersonalData() {
+  document.getElementById('more-menu').classList.remove('show');
+  IskoAPI.download(`/api/scholars/${encodeURIComponent(CODE)}/data-export`);
+  showToast('Export started', 'A file with all personal data held for this scholar is downloading. Hand it over only to the scholar, through a secure channel.');
+}
+/* ---------- Tabs ---------- */
+function switchTab(tab) {
+  document.querySelectorAll('#profile-tabs .tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  ['personal', 'academic', 'stipend', 'graduation', 'documents'].forEach(t => $('tab-' + t).style.display = t === tab ? 'block' : 'none');
+  if (tab === 'documents') loadDocuments();
+}
+document.querySelectorAll('#profile-tabs .tab-btn').forEach(btn => btn.addEventListener('click', () => switchTab(btn.dataset.tab)));
+
+loadScholar().then(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('tab')) switchTab(q.get('tab'));
+  if (q.get('edit') === '1') openEditView();
+});
+</script>
+</body>
+</html>

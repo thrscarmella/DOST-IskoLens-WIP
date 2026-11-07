@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOST GeoMap · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  .geo-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    height: calc(100vh / var(--ui-zoom, 1) - 190px);
+    min-height: 620px;
+    max-height: 820px;
+  }
+  @media (max-width: 1000px) { .geo-layout { grid-template-columns: 1fr; height: auto; max-height: none; } }
+
+  .geo-map-panel {
+    background: radial-gradient(ellipse at 50% 50%, #1d2c56 0%, #101a38 42%, #070b16 78%, #050810 100%);
+    border-radius: var(--radius-md);
+    padding: 24px 30px;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(56, 130, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 1000px) { .geo-map-panel { height: 520px; } }
+  @media (max-width: 1000px) {
+    .geo-layout > div:last-child, .geo-layout > div:last-child > .card { height: auto; max-height: 320px; }
+  }
+  .geo-map-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image:
+      linear-gradient(to right, #7fc4ff 1px, transparent 1px),
+      linear-gradient(to bottom, #7fc4ff 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+  .geo-panel-header { position: relative; z-index: 2; }
+  .geo-eyebrow { color: #7c93c9; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 5px; }
+  .geo-title { color: #fff; font-size: 16.5px; line-height: 1.3; max-width: 420px; margin-bottom: 10px; }
+
+  .geo-map-stage { position: relative; flex: 1; min-height: 0; margin: 0 auto; transition: transform 0.2s ease; transform-origin: 50% 50%; display: flex; width: fit-content; }
+  .geo-map-stage img { height: 100%; width: auto; max-width: 100%; display: block; position: relative; z-index: 1; object-fit: contain; }
+  #geo-dots { position: absolute; inset: 0; }
+
+  .geo-zoom-controls {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 4;
+  }
+  .geo-zoom-controls button {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: rgba(13, 21, 38, 0.85);
+    border: 1px solid rgba(255,255,255,0.14);
+    color: #cfe0ff;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .geo-zoom-controls button:hover { background: rgba(56, 130, 246, 0.35); color: #fff; }
+
+  /* ---------------- Live pulsing marker (radar / GPS beacon style) ---------------- */
+  .geo-marker {
+    position: absolute;
+    width: 22px; height: 22px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 3;
+  }
+  .geo-marker-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    animation: geo-ping 3s ease-in-out infinite;
+  }
+  .geo-marker-ring:nth-child(2) { animation-delay: 1s; }
+  .geo-marker-ring:nth-child(3) { animation-delay: 2s; }
+  .geo-marker.capital .geo-marker-ring { background: rgba(251, 191, 36, 0.65); }
+
+  @keyframes geo-ping {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    70%  { transform: scale(2.5); opacity: 0.15; }
+    100% { transform: scale(2.8); opacity: 0; }
+  }
+
+  .geo-marker-badge {
+    position: relative;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #0d1526;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.5);
+    z-index: 2;
+    transition: transform 0.15s ease;
+  }
+  .geo-marker.capital .geo-marker-badge { box-shadow: 0 0 0 2px #fbbf24, 0 2px 6px rgba(0,0,0,0.5); }
+  .geo-marker-badge img { width: 13px; height: 13px; }
+  .geo-marker:hover .geo-marker-badge, .geo-marker.selected .geo-marker-badge { transform: scale(1.25); }
+
+  .geo-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(8, 12, 24, 0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    z-index: 10;
+  }
+  .geo-tooltip .tt-name { font-weight: 700; }
+  .geo-tooltip .tt-sub { color: #9db8ec; font-size: 10.5px; margin-top: 1px; }
+  .geo-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(8, 12, 24, 0.97);
+  }
+  .geo-marker:hover .geo-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .geo-legend { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; position: relative; z-index: 2; }
+  .geo-legend-item { display:flex; align-items:center; gap:7px; font-size:11px; color:#9db3d9; }
+  .geo-legend-dot { width:10px; height:10px; border-radius:50%; }
+
+  .geo-muni-list-item { display:flex; justify-content:space-between; align-items:center; padding:10px 12px; border-radius:8px; cursor:pointer; font-size:13px; }
+  .geo-muni-list-item:hover, .geo-muni-list-item.active { background: var(--blue-50); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>DOST GeoMap</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; DOST GeoMap</div>
+        <p class="page-lead">Scholar distribution across the 11 municipalities of Davao Oriental. Taller, brighter blocks have more scholars. Hover for a quick look, click for detail.</p>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div class="geo-layout">
+        <div class="geo-map-panel">
+          <div class="geo-panel-header">
+            <div class="geo-eyebrow">Davao Oriental Region · Region XI</div>
+            <div class="geo-title">DOST-Provincial Science and Technology Office of Davao Oriental</div>
+          </div>
+
+          <div class="geo-controls">
+            <select id="geo-metric" aria-label="What the map shows"></select>
+            <div class="seg" role="group" aria-label="Map view">
+              <button type="button" class="on" data-view="tilted"><i class="fa-solid fa-cube"></i> 3D</button>
+              <button type="button" data-view="flat"><i class="fa-regular fa-map"></i> Flat</button>
+            </div>
+          </div>
+          <div class="geo3d-stage" id="geo3d-stage"><div class="text-sm" style="color:#9fb3da; padding:20px;">Loading map…</div></div>
+
+          <div class="geo-zoom-controls">
+            <button onclick="geoMap && geoMap.zoomBy(1.35)" aria-label="Zoom in"><i class="fa-solid fa-plus"></i></button>
+            <button onclick="geoMap && geoMap.zoomBy(1 / 1.35)" aria-label="Zoom out"><i class="fa-solid fa-minus"></i></button>
+            <button onclick="geoMap && geoMap.resetZoom()" aria-label="Reset view"><i class="fa-solid fa-expand"></i></button>
+          </div>
+        </div>
+
+        <div style="height: 100%; display: flex; flex-direction: column; min-height: 0;">
+          <div class="card card-pad" style="height: 100%; display: flex; flex-direction: column; min-height: 0;">
+            <div style="font-weight:700; font-size:13.5px; margin-bottom:12px; flex-shrink:0;">Municipalities</div>
+            <div id="geo-muni-list" style="flex:1; overflow-y:auto; min-height:0;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-pad mt-24" id="geo-detail-panel"></div>
+
+      <div class="section-heading"><div class="icon-badge"><i class="fa-solid fa-table-list"></i></div> All Municipalities — Summary</div>
+      <div class="card">
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Municipality</th><th>Total Scholars</th><th>Active</th><th>Graduated</th><th>Terminated</th><th>Below GWA Requirement</th></tr></thead>
+            <tbody id="geo-summary-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/vendor/d3.min.js"></script>
+<script src="../js/geomap3d.js"></script>
+<script>
+renderShell('geomap');
+let geoMap = null;
+let munis = [];
+let selected = null;
+
+function renderList() {
+  const metric = document.getElementById('geo-metric').value;
+  const rows = munis.slice().sort((a, b) => b[metric] - a[metric] || a.name.localeCompare(b.name));
+  document.getElementById('geo-muni-list').innerHTML = rows.map(m => `
+    <div class="geo-muni-list-item${m.name === selected ? ' active' : ''}" onclick="selectMunicipality('${esc(m.name)}')">
+      <span>${esc(m.name)}${m.is_capital ? ' <i class="fa-solid fa-star" style="color:#f59e0b; font-size:10px;"></i>' : ''}</span>
+      <span class="badge badge-blue">${m[metric] === null || m[metric] === undefined ? '—' : m[metric]}${metric === 'acceptance_rate' && m[metric] !== null ? '%' : ''}</span>
+    </div>`).join('');
+}
+
+function renderSummary() {
+  const tot = munis.reduce((a, m) => { ['total', 'active', 'graduated', 'terminated', 'below_requirement'].forEach(k => a[k] = (a[k] || 0) + m[k]); return a; }, {});
+  document.getElementById('geo-summary-table').innerHTML = munis.map(m => `
+    <tr style="cursor:pointer;" onclick="selectMunicipality('${esc(m.name)}')"><td class="cell-primary">${esc(m.name)}</td><td>${m.total}</td><td>${m.active}</td><td>${m.graduated}</td><td>${m.terminated}</td><td>${m.below_requirement}</td></tr>`).join('') +
+    `<tr style="font-weight:700;"><td>All municipalities</td><td>${tot.total}</td><td>${tot.active}</td><td>${tot.graduated}</td><td>${tot.terminated}</td><td>${tot.below_requirement}</td></tr>`;
+}
+
+function selectMunicipality(name) {
+  selected = name;
+  if (geoMap) geoMap.select(name);
+  renderList();
+  const m = munis.find(x => x.name === name);
+  if (!m) return;
+  const programs = Object.entries(m.active_by_program || {});
+  document.getElementById('geo-detail-panel').innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px;">
+      <div>
+        <h3 style="font-size:17px;">${esc(m.name)}${m.is_capital ? ' <span class="badge badge-amber">Provincial capital</span>' : ''}</h3>
+        <div class="text-sm text-muted mt-8">Scholar records encoded in IskoLens for this municipality.</div>
+      </div>
+      <a class="btn btn-primary" href="scholar-records.html?municipality_id=${m.id}"><i class="fa-solid fa-users"></i> View Scholars Here</a>
+    </div>
+    <div class="stat-grid mt-16">
+      <div class="stat-card"><div class="stat-value">${m.total}</div><div class="stat-label">Total scholars</div></div>
+      <div class="stat-card accent-green"><div class="stat-value">${m.active}</div><div class="stat-label">Active</div></div>
+      <div class="stat-card accent-purple"><div class="stat-value">${m.graduated}</div><div class="stat-label">Graduated</div></div>
+      <div class="stat-card accent-red"><div class="stat-value">${m.below_requirement}</div><div class="stat-label">Below GWA requirement</div></div>
+    </div>
+    <div class="text-sm mt-16"><strong>Active scholars by program:</strong> ${programs.length ? programs.map(([p, n]) => `${esc(p)} ${n}`).join(', ') : 'none yet'}</div>
+    ${m.applicant_data
+      ? `<div class="text-sm mt-8"><strong>Applicants (${m.applicant_year}-${m.applicant_year + 1}):</strong> ${m.applicants} · qualifiers ${m.qualifiers} · awardees ${m.awardees} · acceptance rate ${m.acceptance_rate ?? '—'}% · applications ${m.applicant_growth >= 0 ? '+' : ''}${m.applicant_growth}% from the previous cycle</div>
+         <div class="text-sm mt-8"><strong>Outreach priority:</strong> <span class="badge ${{ High: 'badge-red', Medium: 'badge-amber', Low: 'badge-green' }[m.priority]}">${m.priority}</span> (score ${m.priority_score} of 100, from qualification rate, active scholars and application growth)</div>`
+      : '<p class="inline-note mt-8">No applicant data yet: acceptance rate and outreach priority appear once the applicant and qualifier counts from DOST Davao Oriental are loaded.</p>'}`;
+}
+
+(async function init() {
+  try {
+    const data = await IskoAPI.get('/api/geomap');
+    IskoAPI.fillSelect('geo-metric', (await IskoAPI.lookups()).options.geomap_metrics, null, 'total', 'label', 'value');
+    munis = data.municipalities;
+    geoMap = await IskoGeoMap.create(document.getElementById('geo3d-stage'), {
+      data: munis, metric: 'total', onSelect: selectMunicipality });
+    renderList();
+    renderSummary();
+    const prefId = ISKOLENS_SESSION.preferences.default_municipality_id;
+    const pref = munis.find(m => m.id === prefId) || munis.find(m => m.is_capital) || munis[0];
+    if (pref) selectMunicipality(pref.name);
+  } catch (err) {
+    document.getElementById('geo3d-stage').innerHTML = `<div class="text-sm" style="color:#fca5a5; padding:20px;">The map could not be loaded: ${esc(err.message)}</div>`;
+  }
+})();
+
+document.getElementById('geo-metric').addEventListener('change', e => {
+  const needsApplicants = ['acceptance_rate', 'priority_score'].includes(e.target.value);
+  if (needsApplicants && !munis.some((m) => m.applicant_data)) {
+    showToast('No applicant data yet', 'Acceptance rates and outreach priority need the applicant and qualifier counts from the DOST Davao Oriental dataset.', 'warning');
+    e.target.value = 'total';
+  }
+  if (geoMap) geoMap.setMetric(e.target.value); renderList();
+});
+document.querySelectorAll('.geo-controls .seg button').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('.geo-controls .seg button').forEach(x => x.classList.toggle('on', x === b));
+  if (geoMap) geoMap.setView(b.dataset.view);
+}));
+</script>
+</body>
+</html>

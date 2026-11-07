@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Descriptive Analytics · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Descriptive Analytics</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Descriptive Analytics</div>
+      </div>
+      <div class="page-header-actions">
+        
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead">What has happened in the scholarship program, computed from the records in DOST-IskoLens.</p>
+      <div class="stat-grid mt-16" id="d-stats"></div>
+      <section class="card card-pad mt-24" id="demographics" aria-labelledby="h-demographics">
+        <h2 id="h-demographics" style="font-size:16px; margin-bottom:4px;">Demographics</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Scholars by sex, municipality, program and status.</p>
+        <div id="c-demographics"></div>
+      </section>
+      <section class="card card-pad mt-24" id="acceptance-rates" aria-labelledby="h-acceptance-rates">
+        <h2 id="h-acceptance-rates" style="font-size:16px; margin-bottom:4px;">Acceptance Rates</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Applicants, qualifiers and awardees per scholarship cycle.</p>
+        <div id="c-acceptance-rates"></div>
+      </section>
+      <section class="card card-pad mt-24" id="hei-distribution" aria-labelledby="h-hei-distribution">
+        <h2 id="h-hei-distribution" style="font-size:16px; margin-bottom:4px;">HEI Distribution</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Where scholars study, and their most common degree programs.</p>
+        <div id="c-hei-distribution"></div>
+      </section>
+      <section class="card card-pad mt-24" id="stipend-disbursement" aria-labelledby="h-stipend-disbursement">
+        <h2 id="h-stipend-disbursement" style="font-size:16px; margin-bottom:4px;">Stipend Disbursement</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Released stipends per year, and the status of all disbursements.</p>
+        <div id="c-stipend-disbursement"></div>
+      </section>
+      <section class="card card-pad mt-24" id="graduation-termination" aria-labelledby="h-graduation-termination">
+        <h2 id="h-graduation-termination" style="font-size:16px; margin-bottom:4px;">Graduation &amp; Termination</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Graduation and termination rates per scholarship cycle.</p>
+        <div id="c-graduation-termination"></div>
+      </section>
+      <section class="card card-pad mt-24" id="school-rankings" aria-labelledby="h-school-rankings">
+        <h2 id="h-school-rankings" style="font-size:16px; margin-bottom:4px;">School Performance Ranks</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Secondary schools by qualifiers and by scholars produced.</p>
+        <div id="c-school-rankings"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../vendor/chartjs/chart.umd.min.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('descriptive');
+async function load() {
+  try {
+    const d = await IskoAPI.get('/api/analytics/descriptive');
+    const dem = d.demographics;
+    const by = (arr, k) => (arr.find((x) => x.name === k) || {}).count || 0;
+    document.getElementById('d-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value">${d.total_scholars}</div><div class="stat-label">Scholars on record</div></div>
+      <div class="stat-card accent-green"><div class="stat-value">${by(dem.by_status, 'Active')}</div><div class="stat-label">Active</div></div>
+      <div class="stat-card accent-purple"><div class="stat-value">${by(dem.by_status, 'Graduated')}</div><div class="stat-label">Graduated</div></div>
+      <div class="stat-card accent-red"><div class="stat-value">${by(dem.by_status, 'Terminated')}</div><div class="stat-label">Terminated</div></div>`;
+    const put = (id, html) => { document.getElementById('c-' + id).innerHTML = html; };
+    if (!dem.enough_data) put('demographics', Live.noData('Demographics'));
+    else {
+      put('demographics', `<div class="two-col-grid"><div>${Live.box('ch-sex', 220)}</div><div>${Live.box('ch-prog', 220)}</div></div><div class="mt-16">${Live.box('ch-muni', 280)}</div>`);
+      Live.chart('ch-sex', 'doughnut', dem.by_sex.map((x) => x.name), [{ label: 'Scholars', data: dem.by_sex.map((x) => x.count) }]);
+      Live.chart('ch-prog', 'doughnut', dem.by_program.map((x) => x.name), [{ label: 'Scholars', data: dem.by_program.map((x) => x.count) }]);
+      Live.chart('ch-muni', 'bar', dem.by_municipality.map((x) => x.name), [{ label: 'Scholars', data: dem.by_municipality.map((x) => x.count) }]);
+    }
+    const ar = d.acceptance_rates;
+    if (!ar.enough_data) put('acceptance-rates', Live.noData('Acceptance rates (from the applicant and qualifier counts)'));
+    else {
+      put('acceptance-rates', Live.box('ch-acc', 260) + '<div class="mt-16">' + Live.table(['Cycle', 'Applicants', 'Qualifiers', 'Awardees', 'Qualification rate', 'Acceptance rate'],
+        ar.by_cycle.map((c) => [c.cycle, c.applicants, c.qualifiers, c.awardees, Live.pct(c.qualification_rate), Live.pct(c.acceptance_rate)])) + '</div>');
+      Live.chart('ch-acc', 'line', ar.by_cycle.map((c) => c.cycle), [{ label: 'Acceptance rate (%)', data: ar.by_cycle.map((c) => c.acceptance_rate) }, { label: 'Qualification rate (%)', data: ar.by_cycle.map((c) => c.qualification_rate) }]);
+    }
+    const hei = d.hei_distribution;
+    if (!hei.enough_data) put('hei-distribution', Live.noData('HEI distribution'));
+    else {
+      put('hei-distribution', `<div class="two-col-grid"><div>${Live.box('ch-hei', 260)}</div><div>${Live.table(['Degree program', 'Scholars'], hei.top_degrees.map((x) => [x.name, x.count]))}</div></div>`);
+      Live.chart('ch-hei', 'bar', hei.by_hei.map((x) => x.name), [{ label: 'Scholars', data: hei.by_hei.map((x) => x.count) }], { indexAxis: 'y' });
+    }
+    const sd = d.stipend_disbursement;
+    if (!sd.enough_data) put('stipend-disbursement', Live.noData('Stipend disbursement trends'));
+    else {
+      put('stipend-disbursement', `<div class="two-col-grid"><div>${Live.box('ch-sti', 240)}</div><div>${Live.box('ch-sti2', 240)}</div></div>`);
+      Live.chart('ch-sti', 'bar', sd.by_year.map((y) => y.year), [{ label: 'Amount released (PHP)', data: sd.by_year.map((y) => y.amount) }]);
+      Live.chart('ch-sti2', 'doughnut', sd.by_status.map((x) => x.name), [{ label: 'Disbursements', data: sd.by_status.map((x) => x.count) }]);
+    }
+    const gt = d.graduation_termination;
+    if (!gt.enough_data) put('graduation-termination', Live.noData('Graduation and termination rates'));
+    else {
+      put('graduation-termination', Live.box('ch-gt', 260) + '<div class="mt-16">' + Live.table(['Cycle', 'Scholars', 'Graduated', 'Graduation rate', 'Terminated', 'Termination rate'],
+        gt.by_cycle.map((c) => [c.cycle, c.total, c.graduated, Live.pct(c.graduation_rate), c.terminated, Live.pct(c.termination_rate)])) + '</div>');
+      Live.chart('ch-gt', 'bar', gt.by_cycle.map((c) => c.cycle), [{ label: 'Graduation rate (%)', data: gt.by_cycle.map((c) => c.graduation_rate) }, { label: 'Termination rate (%)', data: gt.by_cycle.map((c) => c.termination_rate) }]);
+    }
+    const sr = d.school_rankings;
+    put('school-rankings', (sr.enough_data ? Live.table(['Secondary school', 'Applicants', 'Qualifiers', 'Qualification rate'], sr.by_qualifiers.map((s) => [s.school, s.applicants, s.qualifiers, Live.pct(s.qualification_rate)]))
+      : Live.noData('Qualifier rankings (from the applicant counts per school)')) +
+      (sr.by_scholars.length ? `<h3 style="font-size:14px; margin:18px 0 8px;">Scholars produced per school</h3>${Live.table(['Secondary school', 'Scholars'], sr.by_scholars.map((s) => [s.name, s.count]))}` : ''));
+  } catch (err) { IskoAPI.fail(err, 'Could not load descriptive analytics'); }
+}
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audit Logs · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Audit Logs</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Audit Logs</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="verifyChain()"><i class="fa-solid fa-shield-halved"></i> Verify integrity</button>
+        <button class="btn btn-outline" onclick="exportLogs()"><i class="fa-solid fa-file-export"></i> Export CSV</button>
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <p class="page-lead mt-8" style="margin-bottom:20px;">A read-only record of user and system actions across DOST-IskoLens, kept for accountability and Data Privacy Act compliance. Each entry is chained to the one before it, so any change or deletion is detected.</p>
+      <div id="verify-banner"></div>
+
+      <div class="card card-pad">
+        <div class="tabs-row" id="tabs-row">
+          <button class="tab-btn active" data-filter="all">All</button>
+          <button class="tab-btn" data-filter="edit">Record Edits</button>
+          <button class="tab-btn" data-filter="report">Reports</button>
+          <button class="tab-btn" data-filter="security">Security</button>
+          <button class="tab-btn" data-filter="access">Record Access</button>
+          <button class="tab-btn" data-filter="system">System</button>
+        </div>
+        <div class="table-toolbar">
+          <div class="search-input-wrap"><i class="fa-solid fa-magnifying-glass"></i><input type="text" class="form-control" id="search-input" aria-label="Search the audit log" placeholder="Search by user, action, or target…"></div>
+          <input type="date" class="form-control" style="max-width:170px;" id="filter-date" aria-label="Filter by date">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>User</th><th>Action</th><th>Target</th><th>Details</th><th>Time</th></tr></thead>
+            <tbody id="logs-table-body"></tbody>
+          </table>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
+          <div class="text-sm text-muted" id="log-summary"></div>
+          <div class="pagination" id="log-pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script>
+  // Admin-only page guard: officers typing this URL directly are redirected home.
+  if (ISKOLENS_DATA.currentUser.role !== 'admin') {
+    window.location.replace('dashboard.html');
+  }
+</script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+renderShell('auditlogs');
+let currentFilter = 'all';
+let page = 1;
+let searchTimer = null;
+const typeIcon = { edit: 'fa-pen', report: 'fa-file-lines', security: 'fa-shield-halved', system: 'fa-gears', access: 'fa-eye' };
+const typeColor = { edit: 'blue', report: 'green', security: 'amber', system: 'gray', access: 'gray' };
+
+function params() {
+  const p = new URLSearchParams({ page, per_page: 50, q: document.getElementById('search-input').value.trim(), date: document.getElementById('filter-date').value });
+  if (currentFilter !== 'all') p.set('category', currentFilter);
+  return p;
+}
+
+function detailText(d) {
+  if (!d) return '';
+  return Object.entries(d).map(([k, val]) => {
+    const text = Array.isArray(val) && val.length === 2 ? `${val[0] ?? '—'} → ${val[1] ?? '—'}` : (typeof val === 'object' ? JSON.stringify(val) : val);
+    return `${k.replace(/_/g, ' ')}: ${text}`;
+  }).join('; ');
+}
+
+async function loadLogs() {
+  const tbody = document.getElementById('logs-table-body');
+  try {
+    const data = await IskoAPI.get('/api/audit-logs?' + params());
+    if (!data.entries.length) {
+      tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-clipboard-list"></i></div><h3>No matching log entries</h3><p>Try a different search, filter or date.</p></div></td></tr>`;
+    } else {
+      tbody.innerHTML = data.entries.map(l => {
+        const details = detailText(l.details);
+        return `<tr>
+          <td class="cell-primary">${esc(l.username)}<div class="cell-sub">${esc(l.ip_address || '')}</div></td>
+          <td><span class="badge badge-${typeColor[l.category]}"><i class="fa-solid ${typeIcon[l.category]}"></i> ${esc(l.action)}</span></td>
+          <td>${esc(l.target_label || '')}${l.target_type === 'scholar' && l.target_id ? `<div class="cell-sub">${esc(l.target_id)}</div>` : ''}
+            ${l.can_restore ? `<div><a class="link-action" href="#" onclick="event.preventDefault(); restoreScholar('${esc(l.target_id)}')"><i class="fa-solid fa-rotate-left"></i> Restore record</a></div>` : ''}</td>
+          <td class="text-sm text-muted" style="max-width:340px;" title="${esc(details)}">${esc(details.length > 140 ? details.slice(0, 140) + '…' : details)}</td>
+          <td class="text-sm text-muted" style="white-space:nowrap;">${esc(IskoFmt.dateTime(l.created_at))}</td>
+        </tr>`;
+      }).join('');
+    }
+    const from = data.total ? (data.page - 1) * data.per_page + 1 : 0;
+    document.getElementById('log-summary').textContent = `Showing ${from} to ${Math.min(data.page * data.per_page, data.total)} of ${data.total} entries`;
+    const btn = (p, label, disabled, active, aria) => `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : ''} ${active ? 'aria-current="page"' : ''} aria-label="${aria || 'Page ' + p}" onclick="page=${p}; loadLogs();">${label}</button>`;
+    let html = btn(data.page - 1, '<i class="fa-solid fa-chevron-left" aria-hidden="true"></i>', data.page <= 1, false, 'Previous page');
+    const start = Math.max(1, data.page - 2), end = Math.min(data.pages, start + 4);
+    for (let p = start; p <= end; p++) html += btn(p, p, false, p === data.page);
+    html += btn(data.page + 1, '<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>', data.page >= data.pages, false, 'Next page');
+    document.getElementById('log-pagination').innerHTML = html;
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><h3>Could not load the audit log</h3><p>${esc(err.message)}</p></div></td></tr>`;
+  }
+}
+
+async function verifyChain() {
+  const banner = document.getElementById('verify-banner');
+  try {
+    const r = await IskoAPI.get('/api/audit-logs/verify');
+    banner.innerHTML = r.intact
+      ? `<div class="callout green" style="margin-bottom:16px;"><i class="fa-solid fa-circle-check" style="margin-top:2px;"></i><div><strong>Audit log intact.</strong> All ${r.checked} entries were checked and none has been changed or deleted.</div></div>`
+      : `<div class="callout red" style="margin-bottom:16px;"><i class="fa-solid fa-triangle-exclamation" style="margin-top:2px;"></i><div><strong>Audit log integrity problem.</strong> Entry #${r.first_broken_entry} or an entry before it was changed or deleted outside IskoLens. Report this to the system owner and keep a copy of the database for investigation.</div></div>`;
+  } catch (err) { IskoAPI.fail(err); }
+}
+
+function exportLogs() {
+  const p = params(); p.delete('page'); p.delete('per_page');
+  IskoAPI.download('/api/audit-logs/export?' + p);
+}
+
+async function restoreScholar(code) {
+  confirmAction(`Restore scholar record ${code}? It will appear in scholar lists again.`, async () => {
+    try { await IskoAPI.post(`/api/scholars/${encodeURIComponent(code)}/restore`); showToast('Record restored', `${code} is visible again.`); page = 1; loadLogs(); }
+    catch (err) { IskoAPI.fail(err); }
+  });
+}
+
+document.querySelectorAll('#tabs-row .tab-btn').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('#tabs-row .tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentFilter = btn.dataset.filter; page = 1; loadLogs();
+}));
+document.getElementById('search-input').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { page = 1; loadLogs(); }, 250); });
+document.getElementById('filter-date').addEventListener('change', () => { page = 1; loadLogs(); });
+document.getElementById('logs-table-body').innerHTML = '<tr class="loading-row"><td colspan="5">Loading audit log…</td></tr>';
+loadLogs();
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+/* ==========================================================================
+   DOST-IskoLens — Dark theme
+   Turned on by Settings > Appearance > Theme (html[data-theme="dark"]).
+   Most of the UI uses the colour variables from style.css, so the theme mainly
+   re-maps those. The rest of this file covers places that use fixed colours.
+   The navy sidebar, top bar and banners already suit a dark page and keep
+   their look.
+   ========================================================================== */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --white: #141d33;
+  --gray-25: #172139;
+  --gray-50: #0b1121;
+  --gray-100: #1c2742;
+  --gray-200: #27344f;
+  --gray-300: #3a4a6d;
+  --gray-400: #8492b1;
+  --gray-500: #9ca8c3;
+  --gray-600: #b4bed4;
+  --gray-700: #cad2e4;
+  --gray-800: #dde3f0;
+  --gray-900: #eff3fb;
+
+  --blue-50: rgba(59, 130, 246, .15);
+  --green-50: rgba(34, 197, 94, .13);
+  --green-100: rgba(34, 197, 94, .24);
+  --green-text: #4ade80;
+  --amber-50: rgba(245, 158, 11, .13);
+  --amber-100: rgba(245, 158, 11, .26);
+  --amber-text: #fbbf24;
+  --red-50: rgba(239, 68, 68, .13);
+  --red-100: rgba(239, 68, 68, .26);
+  --red-text: #f87171;
+  --red-600: #f87171;
+  --purple-50: rgba(139, 92, 246, .16);
+  --blue-600: #5b8ff0;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .35);
+  --shadow-md: 0 2px 10px rgba(0, 0, 0, .4);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, .5);
+}
+
+/* Surfaces that use a fixed white */
+html[data-theme="dark"] .profile-menu,
+html[data-theme="dark"] .notif-panel,
+html[data-theme="dark"] .page-btn,
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] .wizard-steps,
+html[data-theme="dark"] .side-drawer,
+html[data-theme="dark"] .modal-box,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .ev-control:focus,
+html[data-theme="dark"] .ev-step-dot { background: var(--white); }
+html[data-theme="dark"] .form-control,
+html[data-theme="dark"] select.form-control,
+html[data-theme="dark"] textarea.form-control { color: var(--gray-900); border-color: var(--gray-300); }
+html[data-theme="dark"] .form-control:disabled { background: var(--gray-100); color: var(--gray-500); }
+html[data-theme="dark"] .form-control::placeholder { color: var(--gray-400); }
+html[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator,
+html[data-theme="dark"] input[type="month"]::-webkit-calendar-picker-indicator { filter: invert(.85); }
+
+/* Headings and numbers that use navy as a text colour */
+html[data-theme="dark"] h1, html[data-theme="dark"] h2, html[data-theme="dark"] h3, html[data-theme="dark"] h4,
+html[data-theme="dark"] .profile-menu-header .pm-name,
+html[data-theme="dark"] .notif-panel-head,
+html[data-theme="dark"] .stat-value,
+html[data-theme="dark"] .side-drawer-header h3,
+html[data-theme="dark"] .logout-modal-title,
+html[data-theme="dark"] .disclaimer-section h4,
+html[data-theme="dark"] .import-summary .is-num,
+html[data-theme="dark"] .section-heading,
+html[data-theme="dark"] .cell-primary { color: var(--gray-900); }
+html[data-theme="dark"] .welcome-banner h2, html[data-theme="dark"] .geo-hero-title,
+html[data-theme="dark"] .hero-cta h3 { color: #fff; }
+html[data-theme="dark"] .page-btn.active { background: var(--blue-500); border-color: var(--blue-500); }
+html[data-theme="dark"] .page-header-row { background: var(--white); border-color: var(--gray-200); }
+html[data-theme="dark"] .data-table th { background: var(--gray-25); color: var(--gray-500); }
+html[data-theme="dark"] .data-table tr:hover td { background: rgba(255, 255, 255, .025); }
+html[data-theme="dark"] .btn-outline { background: transparent; color: var(--gray-800); border-color: var(--gray-300); }
+html[data-theme="dark"] .btn-outline:hover { background: var(--gray-100); }
+html[data-theme="dark"] .badge-gray { background: var(--gray-100); color: var(--gray-600); }
+html[data-theme="dark"] .badge-blue { color: #93b8ff; }
+html[data-theme="dark"] .role-pill { background: none; color: #9aa6bf; }
+html[data-theme="dark"] .modal-overlay { background: rgba(2, 5, 14, .72); }
+html[data-theme="dark"] .toast { background: var(--white); color: var(--gray-800); }
+
+/* Scholar profile edit/add views and the diagnostic sections use their own
+   palette variables, re-mapped here */
+html[data-theme="dark"] #edit-view, html[data-theme="dark"] #acad-view {
+  --card: var(--white); --bg: var(--gray-50); --border: var(--gray-200);
+  --text-900: var(--gray-900); --text-600: var(--gray-600); --text-400: var(--gray-400);
+}
+html[data-theme="dark"] .dx-section {
+  --card: var(--white); --bg: var(--gray-50); --border: var(--gray-200); --navy: #8fb0ff; --navy-light: rgba(90, 130, 230, .18);
+  --text-900: var(--gray-900); --text-600: var(--gray-600); --text-400: var(--gray-400);
+  --green-pale: var(--green-50); --red-pale: var(--red-50); --gold-pale: var(--amber-50);
+}
+html[data-theme="dark"] .dx-b-gray { background: var(--gray-100); color: var(--gray-600); }
+
+/* Sample data banner and import tables */
+html[data-theme="dark"] .sample-data-banner { background: repeating-linear-gradient(135deg, #2a2108 0 14px, #241c06 14px 28px); border-color: #6b5313; color: #f3dc9b; }
+html[data-theme="dark"] .sample-data-banner strong { color: #ffe9a8; }
+html[data-theme="dark"] .import-errors th { background: var(--gray-25); }
+html[data-theme="dark"] .invite-link-box { background: var(--gray-25); }
+html[data-theme="dark"] .callout.green { color: #bdf2cf; }
+html[data-theme="dark"] .callout.red { color: #fecaca; }
+
+/* Scholar profile edit / add-record forms */
+html[data-theme="dark"] .ev-control { background: var(--gray-25); color: var(--gray-900); border-color: var(--gray-300); }
+html[data-theme="dark"] .ev-control:focus { background: var(--white); }
+html[data-theme="dark"] .ev-control[readonly] { background: var(--gray-100); color: var(--gray-500); }
+html[data-theme="dark"] .ev-control::placeholder { color: var(--gray-400); }
+html[data-theme="dark"] .ev-step-dot { background: var(--white); }
+html[data-theme="dark"] .ev-footer, html[data-theme="dark"] .ev-form-footer, html[data-theme="dark"] .ev-card-footer { background: var(--gray-25); border-color: var(--gray-200); }
+html[data-theme="dark"] .av-gwa-label.empty { background: var(--gray-100); }
+html[data-theme="dark"] .tag-pill.pill-teal { background: rgba(20, 184, 140, .16); color: #6ee7c4; }
+html[data-theme="dark"] .tag-pill.pill-purple { color: #c4b5fd; }
+html[data-theme="dark"] .profile-stats-row .ps-value { color: var(--gray-900); }
+html[data-theme="dark"] .completion-item.todo { color: var(--gray-400); }
+
+/* Contrast fixes (WCAG AA): buttons keep a deep blue so white text reads;
+   links and active tabs use a light blue so they read on dark surfaces. */
+html[data-theme="dark"] { --blue-600: #2f63d1; }
+html[data-theme="dark"] .link-action, html[data-theme="dark"] .breadcrumb a,
+html[data-theme="dark"] .tab-btn.active, html[data-theme="dark"] a.auth-link { color: #9bbcff; }
+html[data-theme="dark"] .tab-btn.active { border-color: #9bbcff; }
+html[data-theme="dark"] .off-num, html[data-theme="dark"] .off-name { color: var(--gray-900); }
+html[data-theme="dark"] .wizard-step.active { color: #9bbcff; }

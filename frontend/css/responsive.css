@@ -1,0 +1,170 @@
+/* ==========================================================================
+   DOST-IskoLens — Responsive Rules
+   ========================================================================== */
+
+/* ---- Tablet (≤1100px) ---- */
+@media (max-width: 1100px) {
+  .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-row { grid-template-columns: 1fr; }
+  .two-col-grid { grid-template-columns: 1fr !important; }
+  .page-body { padding: 20px; }
+}
+
+/* ---- Sidebar auto-collapses on small screens ---- */
+@media (max-width: 900px) {
+  .sidebar {
+    width: var(--sidebar-width);
+    transform: translateX(-100%);
+    transition: transform var(--transition);
+    box-shadow: var(--shadow-lg);
+  }
+  .app-shell.sidebar-mobile-open .sidebar {
+    transform: translateX(0);
+  }
+  .main-content { margin-left: 0 !important; }
+  .app-shell.sidebar-collapsed .sidebar { width: var(--sidebar-width); }
+  .app-shell.sidebar-collapsed .sidebar-brand-text,
+  .app-shell.sidebar-collapsed .nav-group-label,
+  .app-shell.sidebar-collapsed .nav-link span:not(.nav-icon),
+  .app-shell.sidebar-collapsed .nav-caret,
+  .app-shell.sidebar-collapsed .sidebar-footer-text {
+    display: revert;
+  }
+  .sidebar-scrim {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(6, 10, 20, 0.5);
+    z-index: 99;
+  }
+  .app-shell.sidebar-mobile-open .sidebar-scrim { display: block; }
+}
+
+/* ---- Mobile (≤640px) ---- */
+@media (max-width: 640px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .page-header-row { padding: 14px 16px; flex-direction: column; align-items: stretch; }
+  .page-body { padding: 16px; }
+  .topbar { padding: 0 16px; }
+  .topbar-clock { display: none; }
+  .welcome-banner { padding: 18px; }
+  .welcome-banner h2 { font-size: 16.5px; }
+  .table-toolbar { flex-direction: column; align-items: stretch; }
+  .wizard-steps { padding: 14px; overflow-x: auto; }
+  .wizard-step span:not(.step-circle) { display: none; }
+  .data-table { font-size: 12px; }
+  .modal-box { max-width: 100%; }
+  .card-pad { padding: 16px; }
+  .role-pill { display: none; }
+  .kpi-card-grid { grid-template-columns: 1fr !important; }
+  .intervention-grid { grid-template-columns: 1fr !important; }
+  .municipal-grid { grid-template-columns: 1fr !important; }
+}
+
+/* Auth pages */
+@media (max-width: 560px) {
+  .auth-card { padding: 28px 22px !important; }
+  .auth-header { padding: 20px 16px !important; }
+}
+
+/* ==========================================================================
+   Overflow safety — keeps page content inside .page-body (and clear of the
+   floating Guides/Disclaimer rail) on every screen size.
+   ========================================================================== */
+/* Grid/flex children may shrink below their content width, so charts, stat
+   cards and panels resize with the page instead of pushing it wider. */
+.page-body [class*="grid"] > *,
+.page-body .card,
+.page-body .chart-card { min-width: 0; }
+.page-body canvas { max-width: 100%; }
+
+/* Tab rows scroll sideways inside themselves when the tabs don't fit. */
+.tabs-row { overflow-x: auto; scrollbar-width: thin; }
+.tabs-row .tab-btn { flex-shrink: 0; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  /* Tables scroll inside their own box instead of stretching the page. */
+  table.data-table { display: block; max-width: 100%; overflow-x: auto; }
+}
+
+@media (max-width: 640px) {
+  .page-body .btn { max-width: 100%; white-space: normal; }
+  .page-header-actions .btn { flex-shrink: 1; }
+  .panel-head, .card-header-row, .chart-card-header { flex-wrap: wrap; gap: 8px; }
+  /* Two-column layouts written inline on a page stack on phones. */
+  .page-body [style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  /* List rows (e.g. generated KPI reports): buttons drop below long titles. */
+  .list-row { flex-wrap: wrap; gap: 10px; }
+  .list-row > * { min-width: 0; }
+  .cell-primary, .cell-sub { overflow-wrap: anywhere; }
+  /* Scholar profile termination panel. */
+  #termination-review-card [style*="min-width"] { min-width: 0 !important; }
+  #termination-actions { flex-wrap: wrap; flex-shrink: 1 !important; }
+}
+
+/* Scholar Profile — Edit Profile view */
+@media (max-width: 1100px) {
+  .ev-layout, .av-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  #edit-view .ev-grid2, #edit-view .ev-grid3, #acad-view .ev-grid2 { grid-template-columns: 1fr; }
+  #edit-view .ev-section, #edit-view .ev-footer, #acad-view .ev-section, #acad-view .ev-footer { padding-left: 18px; padding-right: 18px; }
+  #edit-view .ev-footer, #acad-view .ev-footer { flex-direction: column; align-items: stretch; gap: 12px; }
+}
+@media (max-width: 700px) {
+  .av-banner { flex-wrap: wrap; }
+  .av-banner-back { margin-left: 0; }
+}
+
+/* Descriptive Analytics — sections 1, 2 and campus ranking */
+@media (max-width: 900px) {
+  .dx-grid-2 { grid-template-columns: 1fr; }
+  .dx-kpi-row-3 { grid-template-columns: 1fr; }
+}
+
+/* ---- Small screens: phones and portrait tablets (added for mobile support) ---- */
+@media (max-width: 900px) {
+  /* Guides / Disclaimer become small round buttons at the bottom-right,
+     so content gets the full screen width. */
+  body.has-fab-rail .page-body { padding-right: 16px; }
+  .floating-widgets { top: auto; bottom: 16px; right: 12px; transform: none; flex-direction: row; gap: 8px; }
+  .fw-btn { width: 44px; height: 44px; border-radius: 50%; opacity: .92; }
+  .fw-btn span { display: none; }
+  .tabs-row { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .tab-btn { flex: 0 0 auto; white-space: nowrap; }
+  .page-header-row { flex-wrap: wrap; gap: 10px; }
+  .page-header-actions { flex-wrap: wrap; }
+  .table-toolbar { flex-wrap: wrap; }
+  .table-toolbar .form-control { max-width: none !important; flex: 1 1 160px; }
+  .modal-box { width: calc(100vw - 24px); max-width: calc(100vw - 24px) !important; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .side-drawer { width: 100vw; max-width: 100vw; }
+}
+@media (max-width: 600px) {
+  .page-body { padding: 14px; padding-bottom: 76px; }   /* room for the round buttons */
+  .stat-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 22px; }
+  .stat-icon { display: none; }
+  .stat-delta { font-size: 11px; }
+  .import-summary { grid-template-columns: 1fr; }
+  .geo3d-stage { min-height: 420px; }
+  .geo-layout { height: auto !important; min-height: 0 !important; }
+  .geo-map-panel { min-height: 560px; }
+  .profile-actions { flex-direction: row; flex-wrap: wrap; }
+  .page-header-actions .role-pill { display: none; }
+  h1 { font-size: 20px; }
+}
+@media (max-width: 600px) {
+  .table-toolbar { flex-direction: column; align-items: stretch; }
+  .table-toolbar > *, .table-toolbar .form-control { flex: 0 0 auto !important; width: 100%; max-width: none !important; }
+  .table-toolbar .search-input-wrap { width: 100%; }
+}
+@media (max-width: 760px) {
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap > table.data-table { display: table; max-width: none; min-width: 680px; }
+}
+@media (max-width: 760px) {
+  .table-wrap > table.data-table td:first-child, .table-wrap > table.data-table th:first-child { min-width: 170px; }
+  .table-wrap > table.data-table td { white-space: normal; }
+  .avatar-circle { flex-shrink: 0; }
+}

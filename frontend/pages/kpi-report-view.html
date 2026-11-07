@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Generated KPI Reports · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Generated KPI Reports</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Generated KPI Reports</div>
+      </div>
+      <div class="page-header-actions">
+        <a class="btn btn-primary" href="kpi-reports.html"><i class="fa-solid fa-plus" aria-hidden="true"></i> Generate Report</a>
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <div class="card card-pad"><div id="kpi-history"></div></div>
+    </main>
+  </div>
+</div>
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('kpi');
+async function load() {
+  try {
+    const h = await IskoAPI.get('/api/kpi/reports');
+    document.getElementById('kpi-history').innerHTML = h.reports.length ? Live.table(['Generated', 'Report', 'Period', 'Format', 'Size', 'By', ''], h.reports.map((r) =>
+      [IskoFmt.dateTime(r.generated_at), r.title, r.period_label, r.format.toUpperCase(), `${Math.max(1, Math.round(r.size_bytes / 1024))} KB`, r.generated_by,
+       `<a class="link-action" href="/api/kpi/reports/${r.id}/download${r.format === 'pdf' ? '?inline=1' : ''}" target="_blank" rel="noopener">Open</a> &nbsp;|&nbsp; <a class="link-action" href="/api/kpi/reports/${r.id}/download">Download</a>`]), 'Generated KPI reports')
+      : Live.empty('No reports generated yet', 'Generate one on the KPI Reports page.', 'fa-file-lines');
+  } catch (err) { IskoAPI.fail(err, 'Could not load the history'); }
+}
+load();
+</script>
+</body>
+</html>

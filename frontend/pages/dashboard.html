@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+<style>
+  .two-col-grid { display:grid; grid-template-columns: 1fr 1fr; gap:20px; }
+  .two-col-grid > * { min-width:0; } /* let panels shrink on small screens; tables scroll inside .table-wrap */
+  @media (max-width: 950px) { .two-col-grid { grid-template-columns: 1fr; } }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+  .panel-head .panel-title { font-weight:700; display:flex; align-items:center; gap:8px; }
+  .task-row { display:flex; align-items:flex-start; gap:12px; padding:13px 0; border-bottom:1px solid var(--gray-100); }
+  .task-row:last-child { border-bottom:none; }
+  .task-row .task-flag { width:8px; height:8px; border-radius:50%; margin-top:6px; flex-shrink:0; }
+  .task-row .task-flag.red { background:var(--red-500); }
+  .task-row .task-flag.amber { background:var(--amber-500); }
+  .task-row .task-flag.gray { background:var(--gray-400); }
+  .task-row .task-text { flex:1; min-width:0; overflow-wrap:anywhere; }
+  .task-row .task-text .t-main { font-size:13px; color:var(--gray-800); font-weight:500; }
+  .task-row .task-text .t-sub { font-size:11.5px; color:var(--gray-500); margin-top:2px; }
+  .officer-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid var(--gray-100); gap:10px; flex-wrap:wrap; }
+  .officer-row:last-child { border-bottom:none; }
+  .officer-row .off-name { font-weight:600; font-size:13px; }
+  .officer-row .off-sub { font-size:11.5px; color:var(--gray-500); }
+  .officer-row .off-stats { display:flex; gap:18px; text-align:center; }
+  .officer-row .off-stats div span { display:block; }
+  .off-stats .off-num { font-weight:700; font-size:15px; color:var(--navy-900); }
+  .off-stats .off-lbl { font-size:10px; color:var(--gray-500); text-transform:uppercase; }
+  .hero-cta {
+    background: linear-gradient(120deg, var(--blue-600), var(--navy-800));
+    border-radius: var(--radius-md); padding: 22px 26px; color:#fff;
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .hero-cta h3 { color:#fff; font-size:16px; margin-bottom:4px; }
+  .hero-cta p { color:#cfe0ff; font-size:12.5px; }
+
+  /* ---------------- Full-size GeoMap panel (same as geomap.html, narrowed to half width) ---------------- */
+  .geo-dash-row { display:grid; grid-template-columns: 1fr 1fr; gap:20px; height: calc(100vh / var(--ui-zoom, 1) - 230px); min-height: 440px; max-height: 620px; }
+  @media (max-width: 950px) { .geo-dash-row { grid-template-columns: 1fr; height: auto; max-height: none; } }
+
+  .geo-hero-card {
+    background: var(--navy-900);
+    border-radius: var(--radius-md);
+    padding: 36px 44px;
+    border: 1px solid rgba(56, 130, 246, 0.15);
+    position: relative;
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: 100%;
+    align-items: center;
+    column-gap: 144px;
+    height: calc(100vh / var(--ui-zoom, 1) - 200px);
+    min-height: 500px;
+    max-height: 720px;
+  }
+  .geo-hero-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.1;
+    background-image:
+      linear-gradient(to right, #7fc4ff 1px, transparent 1px),
+      linear-gradient(to bottom, #7fc4ff 1px, transparent 1px);
+    background-size: 42px 42px;
+    -webkit-mask-image: linear-gradient(to left, black 0%, black 45%, transparent 82%);
+    mask-image: linear-gradient(to left, black 0%, black 45%, transparent 82%);
+  }
+  .geo-hero-left { justify-self: end; max-width: 420px; color: #fff; position: relative; z-index: 2; padding-left: 70px; }
+  .geo-hero-title { color: #fff; font-size: 30px; line-height: 1.25; margin: 8px 0 26px; max-width: 400px; }
+  .geo-hero-stats { display: flex; gap: 32px; margin-bottom: 24px; flex-wrap: wrap; }
+  .geo-hero-right {
+    flex-shrink: 0;
+    width: 440px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 2;
+    margin-left: 240px;
+  }
+  .geo-hero-right .geo-panel-header { align-self: flex-start; margin-bottom: 8px; }
+  .geo-hero-right .geo-map-stage { flex: 1; min-height: 0; }
+  .geo-hero-right .geo3d-stage { flex: 1; min-height: 0; width: 100%; }
+  .geo-hero-right .geo3d-legend { display: none; }
+
+  /* Responsive tiers. They are based on the card's own width (container
+     queries), not the window, so collapsing/expanding the sidebar is taken
+     into account too. At 1430px and wider the card keeps the exact tuned
+     layout above (text padding 70px, map margin 240px, gaps 144px). */
+  .geo-hero-wrap { container-type: inline-size; container-name: geohero; }
+
+  /* Medium screens (most laptops): same side-by-side layout, just with the
+     fixed spacing scaled down so the map no longer pushes past the screen. */
+  @container geohero (max-width: 1340px) {
+    .geo-hero-card { column-gap: 48px; }
+    .geo-hero-left { padding-left: 24px; }
+    .geo-hero-right { margin-left: clamp(0px, calc(100cqi - 1150px), 240px); }
+  }
+
+  /* Tablets and narrow windows: stack text above the map. */
+  @container geohero (max-width: 1000px) {
+    .geo-hero-card { grid-template-columns: 1fr; grid-template-rows: auto auto; row-gap: 28px; height: auto; min-height: 0; max-height: none; padding: 32px; }
+    .geo-hero-left { justify-self: stretch; max-width: none; padding-left: 0; }
+    .geo-hero-title { max-width: none; }
+    .geo-hero-right { width: 100%; height: 540px; margin-left: 0; }
+  }
+
+  /* Phones. */
+  @container geohero (max-width: 560px) {
+    .geo-hero-card { padding: 22px 18px; }
+    .geo-hero-title { font-size: 23px; margin-bottom: 18px; }
+    .geo-hero-stats { gap: 20px; }
+    .geo-hero-right { height: 460px; }
+    .geo-hero-right .geo-title { font-size: 13px; }
+  }
+
+  .geo-map-panel {
+    background: radial-gradient(ellipse at 50% 50%, #1d2c56 0%, #101a38 42%, #070b16 78%, #050810 100%);
+    border-radius: var(--radius-md);
+    padding: 24px 30px;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(56, 130, 246, 0.15);
+    display: flex;
+    flex-direction: column;
+  }
+  @media (max-width: 950px) { .geo-map-panel { height: 480px; } }
+  .geo-map-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    background-image:
+      linear-gradient(to right, #7fc4ff 1px, transparent 1px),
+      linear-gradient(to bottom, #7fc4ff 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+  .geo-panel-header { position: relative; z-index: 2; }
+  .geo-eyebrow { color: #7c93c9; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 5px; }
+  .geo-title { color: #fff; font-size: 16.5px; line-height: 1.3; max-width: 420px; margin-bottom: 10px; }
+
+  .geo-map-stage { position: relative; flex: 1; min-height: 0; margin: 0 auto; display: flex; width: fit-content; }
+  .geo-map-stage img { height: 100%; width: auto; max-width: 100%; display: block; position: relative; z-index: 1; object-fit: contain; }
+  .geo-dots { position: absolute; inset: 0; }
+
+  /* ---------------- Live pulsing marker (radar / GPS beacon style) ---------------- */
+  .geo-marker {
+    position: absolute;
+    width: 22px; height: 22px;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 3;
+  }
+  .geo-marker-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.6);
+    animation: geo-ping 3s ease-in-out infinite;
+  }
+  .geo-marker-ring:nth-child(2) { animation-delay: 1s; }
+  .geo-marker-ring:nth-child(3) { animation-delay: 2s; }
+  .geo-marker.capital .geo-marker-ring { background: rgba(251, 191, 36, 0.65); }
+
+  @keyframes geo-ping {
+    0%   { transform: scale(1);   opacity: 0.6; }
+    70%  { transform: scale(2.5); opacity: 0.15; }
+    100% { transform: scale(2.8); opacity: 0; }
+  }
+
+  .geo-marker-badge {
+    position: relative;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #0d1526;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.9), 0 2px 6px rgba(0,0,0,0.5);
+    z-index: 2;
+    transition: transform 0.15s ease;
+  }
+  .geo-marker.capital .geo-marker-badge { box-shadow: 0 0 0 2px #fbbf24, 0 2px 6px rgba(0,0,0,0.5); }
+  .geo-marker-badge img { width: 13px; height: 13px; }
+  .geo-marker:hover .geo-marker-badge { transform: scale(1.25); }
+
+  .geo-tooltip {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    background: rgba(8, 12, 24, 0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 11.5px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+    z-index: 10;
+  }
+  .geo-tooltip .tt-name { font-weight: 700; }
+  .geo-tooltip .tt-sub { color: #9db8ec; font-size: 10.5px; margin-top: 1px; }
+  .geo-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%; left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: rgba(8, 12, 24, 0.97);
+  }
+  .geo-marker:hover .geo-tooltip { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .geo-legend { display:flex; gap:16px; margin-top:10px; flex-wrap:wrap; position: relative; z-index: 2; }
+  .geo-legend-item { display:flex; align-items:center; gap:7px; font-size:11px; color:#9db3d9; }
+  .geo-legend-dot { width:10px; height:10px; border-radius:50%; }
+
+  .geo-info-card { height:100%; display:flex; flex-direction:column; justify-content:center; background: var(--navy-950); color:#fff; border:none; border-radius: var(--radius-md); padding: 28px 30px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1 id="dash-title">Dashboard</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Dashboard</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body" id="dash-body">
+      <!-- Content injected by role below -->
+    </div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/vendor/d3.min.js"></script>
+<script src="../js/geomap3d.js"></script>
+<script>
+renderShell('dashboard');
+const role = ISKOLENS_DATA.currentUser.role;
+const user = ISKOLENS_DATA.currentUser;
+const dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+function timeGreeting() {
+  const hour = new Date().getHours();
+  return hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+}
+const urgencyClass = u => u === 'red' ? 'red' : u === 'amber' ? 'amber' : 'gray';
+const empty = (icon, title, text) => `<div class="empty-state"><div class="empty-icon"><i class="fa-solid ${icon}"></i></div><h3>${title}</h3><p>${text}</p></div>`;
+
+function geoHero(d, title, heading) {
+  return `
+    <div class="geo-hero-wrap mt-24"><div class="geo-hero-card">
+      <div class="geo-hero-left">
+        <div class="geo-eyebrow">${title}</div>
+        <h2 class="geo-hero-title">${heading}</h2>
+        <div class="geo-hero-stats">
+          <div><span class="wb-stat-value" style="color:#fbbf24;">${d.totals.scholars}</span><div class="wb-stat-label">Scholars across ${d.totals.municipalities_with_scholars} of 11 municipalities</div></div>
+          <div><span class="wb-stat-value" style="color:#c4b5fd;">${d.totals.active}</span><div class="wb-stat-label">Currently active</div></div>
+        </div>
+        <a href="geomap.html" class="btn btn-primary"><i class="fa-solid fa-map-location-dot"></i> Open Full GeoMap</a>
+      </div>
+      <div class="geo-hero-right">
+        <div class="geo-panel-header">
+          <div class="geo-eyebrow">Davao Oriental · Region XI</div>
+          <div class="geo-title">Scholars per municipality</div>
+        </div>
+        <div class="geo3d-stage" id="dash-geo3d"></div>
+      </div>
+    </div></div>`;
+}
+
+function mountMap(d) {
+  IskoGeoMap.create(document.getElementById('dash-geo3d'), { data: d.municipalities, metric: 'total', compact: true,
+    onSelect: () => { window.location.href = 'geomap.html'; } }).catch(() => {
+      document.getElementById('dash-geo3d').innerHTML = '<div class="text-sm" style="color:#9fb3da;">Map unavailable.</div>';
+    });
+}
+
+function belowTable(rows) {
+  return rows.length ? rows.map(s => `
+    <tr>
+      <td><div class="cell-primary">${esc(s.code)}</div><div class="cell-sub">${esc(s.hei)} · ${esc(IskoFmt.yearLevel(s.year_level))}</div></td>
+      <td>${esc(s.municipality)}</td>
+      <td>${standingBadge(s.academic_standing)}</td>
+      <td><a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(s.code)}&tab=academic">Review</a></td>
+    </tr>`).join('') : `<tr><td colspan="4">${empty('fa-circle-check', 'No scholars below the requirement', 'Every active scholar with a GWA record meets the requirement for their year level.')}</td></tr>`;
+}
+
+function activityList(items) {
+  const color = { edit: 'blue', security: 'amber', report: 'green', system: 'gray', access: 'gray' };
+  return items.length ? items.map(a => `
+    <div class="list-row"><div style="display:flex; gap:10px;">
+      <div class="dot ${color[a.category] || 'gray'}"></div>
+      <div><div style="font-size:13px; color:var(--gray-800);">${esc(a.action)}${a.target_label ? ': ' + esc(a.target_label) : ''}</div>
+      <div class="cell-sub">${esc(a.username)} · ${esc(IskoFmt.relative(a.created_at))}</div></div>
+    </div></div>`).join('') : empty('fa-clock-rotate-left', 'No activity yet', 'Actions such as encoding and approvals appear here.');
+}
+
+const taskRows = items => items.length ? items.map(t => `
+  <div class="task-row" style="cursor:pointer;" onclick="window.location.href='${esc(t.link)}'">
+    <div class="task-flag ${urgencyClass(t.urgency)}"></div>
+    <div class="task-text"><div class="t-main">${esc(t.title)}</div><div class="t-sub">${esc(t.sub)}</div></div>
+    <i class="fa-solid fa-chevron-right" style="color:var(--gray-300); margin-top:4px;"></i>
+  </div>`).join('') : empty('fa-circle-check', 'Nothing pending', 'You are all caught up.');
+
+function renderAdmin(d) {
+  document.getElementById('dash-title').textContent = 'System Overview';
+  const n = d.action_items.length;
+  document.getElementById('dash-body').innerHTML = `
+    <div class="welcome-banner">
+      <h2>${timeGreeting()}, ${esc(user.name.split(' ')[0])}</h2>
+      <p>Province-wide oversight of DOST Davao Oriental's scholarship program</p>
+      <div class="banner-date">${dateStr}</div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-card-top"><div><div class="stat-value">${d.totals.scholars}</div><div class="stat-label">Total Scholars (All Areas)</div></div><div class="stat-icon"><i class="fa-solid fa-user-group"></i></div></div><div class="stat-delta flat">${d.totals.active} active, ${d.totals.graduated} graduated</div></div>
+      <div class="stat-card accent-purple"><div class="stat-card-top"><div><div class="stat-value">${d.users.officers}</div><div class="stat-label">Scholarship Officers</div></div><div class="stat-icon purple"><i class="fa-solid fa-user-tie"></i></div></div><div class="stat-delta flat">${d.users.admins} Administrator${d.users.admins === 1 ? '' : 's'}</div></div>
+      <div class="stat-card accent-red"><div class="stat-card-top"><div><div class="stat-value">${n}</div><div class="stat-label">Items Needing Admin Action</div></div><div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div></div><div class="stat-delta ${n ? 'down' : 'flat'}">${n ? 'Requires review' : 'All clear'}</div></div>
+      <div class="stat-card accent-green"><div class="stat-card-top"><div><div class="stat-value">${d.added_this_week}</div><div class="stat-label">Scholars Added This Week</div></div><div class="stat-icon green"><i class="fa-solid fa-user-plus"></i></div></div><div class="stat-delta flat">Encoded or imported</div></div>
+    </div>
+    ${geoHero(d, 'Province-Wide Distribution', 'All 11 Municipalities, One Program')}
+    <div class="two-col-grid mt-24">
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-users-gear" style="color:var(--blue-600);"></i> Officer Activity Monitor</div><a href="user-management.html" class="link-action">Manage users</a></div>
+        <div>${d.officer_activity.map(o => `
+          <div class="officer-row"><div><div class="off-name">${esc(o.name)}${o.is_me ? ' (you)' : ''}</div><div class="off-sub">${esc(o.role_label)} · Last active: ${esc(IskoFmt.relative(o.last_active_at))}</div></div>
+            <div class="off-stats"><div><span class="off-num">${o.encoded_this_week}</span><span class="off-lbl">Encoded (7 days)</span></div>
+            <div><span class="off-num" style="color:${o.pending_review ? 'var(--amber-text)' : 'var(--gray-400)'}">${o.pending_review}</span><span class="off-lbl">Pending</span></div></div></div>`).join('')}</div>
+      </div>
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-clipboard-check" style="color:var(--red-500);"></i> Pending Approvals</div><span class="badge badge-red">${n} ITEM${n === 1 ? '' : 'S'}</span></div>
+        <div>${taskRows(d.action_items)}</div>
+      </div>
+    </div>
+    <div class="two-col-grid mt-24">
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-circle-exclamation" style="color:var(--red-500);"></i> Below GWA Requirement (${d.totals.below_requirement})</div><a href="scholar-records.html?standing=below&status=active" class="link-action">View all</a></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Scholar ID</th><th>Municipality</th><th>Standing</th><th>Action</th></tr></thead><tbody>${belowTable(d.below_requirement)}</tbody></table></div>
+      </div>
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue-600);"></i> Recent System-Wide Activity</div><a href="audit-logs.html" class="link-action">View full audit log</a></div>
+        <div>${activityList(d.recent_activity)}</div>
+      </div>
+    </div>`;
+  mountMap(d);
+}
+
+function renderOfficer(d) {
+  document.getElementById('dash-title').textContent = 'My Dashboard';
+  const n = d.tasks.length;
+  document.getElementById('dash-body').innerHTML = `
+    <div class="welcome-banner">
+      <h2>${timeGreeting()}, ${esc(user.name.split(' ')[0])}!</h2>
+      <p>DOST Davao Oriental Scholarship Operations & Monitoring</p>
+      <div class="banner-date">${dateStr}</div>
+    </div>
+    <div class="hero-cta">
+      <div>
+        <h3><i class="fa-solid fa-list-check"></i> ${n ? `You have ${n} item${n === 1 ? '' : 's'} to follow up` : 'No follow-ups right now'}</h3>
+        <p>Encode new records, update GWAs from academic report forms, and act on returned requests.</p>
+      </div>
+      <a href="encode-scholar.html" class="btn" style="background:#fff; color:var(--navy-900); font-weight:700;"><i class="fa-solid fa-user-plus"></i> Encode New Scholar</a>
+    </div>
+    <div class="stat-grid mt-24">
+      <div class="stat-card"><div class="stat-card-top"><div><div class="stat-value">${d.totals.active}</div><div class="stat-label">Total Active Scholars</div></div><div class="stat-icon"><i class="fa-solid fa-user-group"></i></div></div><div class="stat-delta flat">All 11 municipalities</div></div>
+      <div class="stat-card accent-red"><div class="stat-card-top"><div><div class="stat-value">${d.totals.below_requirement}</div><div class="stat-label">Below GWA Requirement</div></div><div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div></div><div class="stat-delta down">Needs follow-up</div></div>
+      <div class="stat-card accent-amber"><div class="stat-card-top"><div><div class="stat-value">${n}</div><div class="stat-label">Follow-up Items</div></div><div class="stat-icon amber"><i class="fa-solid fa-thumbtack"></i></div></div><div class="stat-delta flat">From your records and requests</div></div>
+      <div class="stat-card accent-green"><div class="stat-card-top"><div><div class="stat-value">${d.encoded_this_week}</div><div class="stat-label">Records Encoded This Week</div></div><div class="stat-icon green"><i class="fa-solid fa-pen"></i></div></div><div class="stat-delta flat">Scholars, GWAs and stipends</div></div>
+    </div>
+    ${geoHero(d, 'Where Scholars Are', 'Every Municipality, At a Glance')}
+    <div class="two-col-grid mt-24">
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-list-check" style="color:var(--amber-500);"></i> My Follow-ups</div><span class="badge badge-amber">${n} ITEM${n === 1 ? '' : 'S'}</span></div>
+        <div>${taskRows(d.tasks)}</div>
+      </div>
+      <div class="card card-pad">
+        <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-circle-exclamation" style="color:var(--red-500);"></i> Scholars Below GWA Requirement</div><a href="scholar-records.html?standing=below&status=active" class="link-action">View all</a></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Scholar ID</th><th>Municipality</th><th>Standing</th><th>Action</th></tr></thead><tbody>${belowTable(d.below_requirement)}</tbody></table></div>
+      </div>
+    </div>
+    <div class="card card-pad mt-24">
+      <div class="panel-head"><div class="panel-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--blue-600);"></i> My Recent Activity</div><a href="scholar-records.html" class="link-action">View all records</a></div>
+      <div>${activityList(d.recent_activity)}</div>
+    </div>`;
+  mountMap(d);
+}
+
+(async function init() {
+  document.getElementById('dash-body').innerHTML = '<div class="card card-pad text-sm text-muted">Loading dashboard…</div>';
+  try {
+    const d = await IskoAPI.get('/api/dashboard');
+    if (d.role === 'admin') renderAdmin(d); else renderOfficer(d);
+  } catch (err) {
+    document.getElementById('dash-body').innerHTML = `<div class="card card-pad">${empty('fa-triangle-exclamation', 'Dashboard unavailable', esc(err.message))}</div>`;
+  }
+})();
+</script>
+</body>
+</html>

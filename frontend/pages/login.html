@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-header">
+    <img src="../assets/images/dost-logo.png" alt="DOST logo">
+    <div class="auth-header-text">
+      <div class="rep-line">Republic of the Philippines</div>
+      <div class="inst-line">Science Education Institute</div>
+      <div class="brand-line">DOST - IskoLens</div>
+    </div>
+  </div>
+
+  <div class="auth-body">
+    <div class="auth-card">
+      <h1>Welcome Back</h1>
+      <p class="auth-sub">Sign in to your DOST-IskoLens account to continue</p>
+
+      <form id="login-form" onsubmit="return handleLogin(event)" novalidate>
+        <div class="auth-field" id="field-email">
+          <label>Email or username<span class="required">*</span></label>
+          <input type="text" placeholder="Enter your email or username" id="login-email" autocomplete="username" required>
+          <div class="auth-field-error">Enter your email or username.</div>
+        </div>
+
+        <div class="auth-field" id="field-password">
+          <label>Password<span class="required">*</span></label>
+          <div class="auth-input-wrap">
+            <input type="password" placeholder="Enter your password" id="login-password" autocomplete="current-password" required>
+            <button type="button" class="auth-toggle-eye" aria-label="Show or hide password" onclick="togglePasswordVisibility('login-password', this)">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <div class="auth-field-error">Password is required.</div>
+        </div>
+
+        <div class="auth-row-between">
+          <a class="auth-link" href="forgot-password.html">Forgot password?</a>
+          <span class="auth-muted-text">Contact your administrator for account access</span>
+        </div>
+
+        <div class="auth-field-error" id="login-error" style="display:none; margin:0 0 14px;"></div>
+
+        <button type="submit" class="auth-btn-primary" id="login-btn">Log In</button>
+      </form>
+      <form id="twofa-form" onsubmit="return verifyCode(event)" novalidate style="display:none;">
+        <p style="font-size:14px; margin-bottom:14px;">Enter the 6-digit code from your authenticator app. If you don't have your phone, enter one of your recovery codes.</p>
+        <div class="auth-field" id="field-code">
+          <label for="login-code">Verification code <span class="required">*</span></label>
+          <input type="text" id="login-code" inputmode="numeric" autocomplete="one-time-code" maxlength="20" placeholder="123456">
+        </div>
+        <div class="auth-field-error" id="code-error" style="display:none; margin:0 0 14px;"></div>
+        <button type="submit" class="auth-btn-primary" id="code-btn">Verify</button>
+        <p style="margin-top:12px; font-size:13px;"><a class="auth-link" href="login.html">Start again</a></p>
+      </form>
+
+      <div class="auth-footnote">
+        Don't have an account? <a class="auth-link" href="signup.html">Sign Up</a>
+        <div style="margin-top:10px;"><a class="auth-link" href="privacy-notice.html">Privacy Notice</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
+const loginParams = new URLSearchParams(location.search);
+if (loginParams.get('reason') === 'timeout') {
+  showLoginError('You were signed out after 30 minutes of inactivity. Sign in again to continue.', 'info');
+}
+
+function showLoginError(message, tone) {
+  const box = document.getElementById('login-error');
+  box.textContent = message;
+  box.style.display = 'block';
+  box.style.color = tone === 'info' ? '#bfdbfe' : '';
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email');
+  const password = document.getElementById('login-password');
+  const btn = document.getElementById('login-btn');
+  let valid = true;
+  document.getElementById('field-email').classList.remove('has-error');
+  document.getElementById('field-password').classList.remove('has-error');
+  document.getElementById('login-error').style.display = 'none';
+  if (!email.value.trim()) { document.getElementById('field-email').classList.add('has-error'); valid = false; }
+  if (!password.value) { document.getElementById('field-password').classList.add('has-error'); valid = false; }
+  if (!valid) return false;
+
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+  try {
+    const res = await IskoAPI.post('/api/auth/login', { email: email.value.trim(), password: password.value }, { allow401: true });
+    if (res.two_factor_required) {
+      document.getElementById('login-form').style.display = 'none';
+      document.getElementById('twofa-form').style.display = '';
+      document.getElementById('login-code').focus();
+      return false;
+    }
+    finishLogin(res);
+    return false;
+  } catch (err) {
+    password.value = '';
+    showLoginError(err.message);
+    btn.disabled = false;
+    btn.textContent = 'Log In';
+  }
+  return false;
+}
+function finishLogin(res) {
+    try { localStorage.setItem('iskolens_font_size', res.preferences.font_size || 'medium'); localStorage.setItem('iskolens_theme', res.preferences.theme || 'light'); } catch (err) {}
+    const next = loginParams.get('next');
+    // Only follow same-site page paths, never an outside URL.
+    window.location.href = next && /^\/pages\/[a-z0-9-]+\.html(\?[^#]*)?$/i.test(next) ? next : 'dashboard.html';
+}
+async function verifyCode(e) {
+  e.preventDefault();
+  const btn = document.getElementById('code-btn');
+  const box = document.getElementById('code-error');
+  box.style.display = 'none';
+  btn.disabled = true; btn.textContent = 'Checking…';
+  try {
+    const res = await IskoAPI.post('/api/auth/login/verify', { code: document.getElementById('login-code').value.trim() }, { allow401: true });
+    if (res.used_recovery_code) alert('You signed in with a recovery code. That code can no longer be used. Create new recovery codes in My Profile > Security if you are running low.');
+    finishLogin(res);
+  } catch (err) {
+    if (err.code === 'two_factor_expired') { window.location.href = 'login.html'; return false; }
+    box.textContent = err.message; box.style.display = '';
+    document.getElementById('login-code').value = '';
+    btn.disabled = false; btn.textContent = 'Verify';
+  }
+  return false;
+}
+fetch('/api/auth/config').then((r) => r.json()).then((c) => {
+  if (!c.allow_signup) document.querySelectorAll('a[href="signup.html"]').forEach((a) => { const p = a.closest('.auth-footnote') ? a.parentNode : null; a.remove(); if (p) p.childNodes.forEach((nd) => { if (nd.nodeType === 3 && /have an account/.test(nd.textContent)) nd.textContent = 'Accounts are created by the Administrator. '; }); });
+}).catch(() => {});
+</script>
+</body>
+</html>

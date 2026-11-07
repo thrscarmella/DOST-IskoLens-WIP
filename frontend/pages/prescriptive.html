@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prescriptive Analytics · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Prescriptive Analytics</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Prescriptive Analytics</div>
+      </div>
+      <div class="page-header-actions">
+        <a class="btn btn-primary" href="interventions.html"><i class="fa-solid fa-clipboard-check" aria-hidden="true"></i> Handle Cases</a>
+        <button class="btn btn-outline" onclick="load()"><i class="fa-solid fa-rotate-right" aria-hidden="true"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+    <main class="page-body" id="main">
+      <p class="page-lead">What to do next: intervention recommendations for at-risk scholars, schools to visit for outreach, and municipal priorities. Cases are handled on the Interventions page.</p>
+      <section class="card card-pad mt-24" id="intervention-recommendation" aria-labelledby="h-intervention-recommendation">
+        <h2 id="h-intervention-recommendation" style="font-size:16px; margin-bottom:4px;">At-Risk Scholar Intervention Recommendations</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Active scholars at High or Moderate risk, with the suggested actions for each. <span id="rec-source"></span></p>
+        <div id="c-intervention-recommendation"></div>
+      </section>
+      <section class="card card-pad mt-24" id="monitoring-log" aria-labelledby="h-monitoring-log" style="display:none;">
+        <h2 id="h-monitoring-log" style="font-size:16px; margin-bottom:4px;">Intervention Monitoring Log</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Closed cases with their outcome.</p>
+        <div id="c-monitoring-log"></div>
+      </section>
+      <section class="card card-pad mt-24" id="school-caravan-planning" aria-labelledby="h-school-caravan-planning">
+        <h2 id="h-school-caravan-planning" style="font-size:16px; margin-bottom:4px;">School Caravan Planning</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Secondary schools with the lowest qualification rates, where outreach may help most.</p>
+        <div id="c-school-caravan-planning"></div>
+      </section>
+      <section class="card card-pad mt-24" id="municipal-priority-map" aria-labelledby="h-municipal-priority-map">
+        <h2 id="h-municipal-priority-map" style="font-size:16px; margin-bottom:4px;">Municipal Priority Map</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Outreach priority per municipality, from qualification rate, active scholars and application growth. <a class="link-action" href="geomap.html">Open the GeoMap</a></p>
+        <div id="c-municipal-priority-map"></div>
+      </section>
+      <section class="card card-pad mt-24" id="status-overview" aria-labelledby="h-status-overview">
+        <h2 id="h-status-overview" style="font-size:16px; margin-bottom:4px;">Intervention Status Overview</h2>
+        <p class="text-sm text-muted" style="margin-bottom:14px;">Cases by status and closed cases by outcome.</p>
+        <div id="c-status-overview"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')" aria-label="Close">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/live.js"></script>
+<script>
+renderShell('prescriptive');
+const riskB = (lvl) => `<span class="badge ${{ High: 'badge-red', Moderate: 'badge-amber', Low: 'badge-green' }[lvl] || 'badge-gray'}">${esc(lvl)}</span>`;
+const statusText = { open: 'Open', claimed: 'In progress', closed: 'Closed' };
+// The monitoring log is for Administrators, as before.
+if (ISKOLENS_DATA.currentUser.role === 'admin') document.getElementById('monitoring-log').style.display = '';
+async function load() {
+  const put = (id, html) => { document.getElementById('c-' + id).innerHTML = html; };
+  try {
+    const all = await IskoAPI.get('/api/interventions?tab=all');
+    document.getElementById('rec-source').textContent = all.risk_source === 'model' ? 'Risk levels come from the trained model.' : 'Until the risk model is trained, risk follows academic standing.';
+    const current = all.cases.filter((c) => c.status !== 'closed');
+    put('intervention-recommendation', current.length ? Live.table(['Scholar ID', 'Municipality', 'HEI', 'Risk', 'Reason', 'Recommended actions', 'Status', 'Handled by', ''],
+      current.map((c) => [`<a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(c.scholar.code)}">${esc(c.scholar.code)}</a>`, c.scholar.municipality, c.scholar.hei,
+        riskB(c.risk_level), c.reason, `<ul style="padding-left:16px; list-style:disc; margin:0;">${c.recommended_actions.map((a) => `<li>${esc(a)}</li>`).join('')}</ul>`,
+        statusText[c.status] || c.status, c.claimed_by || '—', `<a class="btn btn-outline btn-sm" href="interventions.html?case=${c.id}">Open case</a>`]), 'At-risk scholar intervention recommendations')
+      : Live.empty('No at-risk scholars', 'No active scholar is at High or Moderate risk right now.', 'fa-circle-check'));
+    const closed = all.cases.filter((c) => c.status === 'closed');
+    put('monitoring-log', closed.length ? Live.table(['Scholar ID', 'Risk', 'Outcome', 'Summary', 'Closed by', 'Closed'],
+      closed.map((c) => [c.scholar.code, riskB(c.risk_level), c.outcome, c.outcome_notes, c.closed_by || '—', IskoFmt.dateTime(c.closed_at)]), 'Intervention monitoring log')
+      : Live.empty('No closed cases yet', 'Closed cases and their outcomes will be listed here.', 'fa-clipboard-list'));
+    const counts = all.counts;
+    const outcomes = Object.entries(all.outcomes);
+    put('status-overview', `<div class="two-col-grid"><div>${Live.table(['Status', 'Cases'], [['Open', counts.open], ['In progress', counts.claimed], ['Closed', counts.closed]])}</div>
+      <div>${outcomes.length ? Live.table(['Outcome', 'Closed cases'], outcomes) : '<p class="text-sm text-muted">No outcomes recorded yet.</p>'}</div></div>`);
+  } catch (err) { IskoAPI.fail(err, 'Could not load intervention recommendations'); }
+  try {
+    const d = await IskoAPI.get('/api/analytics/descriptive');
+    const sr = d.school_rankings;
+    put('school-caravan-planning', sr.enough_data ? Live.table(['Secondary school', 'Applicants', 'Qualifiers', 'Qualification rate'],
+      sr.by_qualifiers.slice().sort((a, b) => (a.qualification_rate ?? 0) - (b.qualification_rate ?? 0)).slice(0, 10).map((s) => [s.school, s.applicants, s.qualifiers, Live.pct(s.qualification_rate)]))
+      : Live.noData('School caravan targets (from the applicant and qualifier counts per school)'));
+  } catch (err) { put('school-caravan-planning', Live.noData('School caravan targets')); }
+  try {
+    const g = await IskoAPI.get('/api/geomap');
+    const ms = g.municipalities;
+    put('municipal-priority-map', ms.some((m) => m.applicant_data)
+      ? Live.table(['Municipality', 'Priority', 'Score', 'Applicants', 'Acceptance rate', 'Active scholars'],
+        ms.slice().sort((a, b) => (b.priority_score ?? 0) - (a.priority_score ?? 0)).map((m) => [m.name,
+          `<span class="badge ${{ High: 'badge-red', Medium: 'badge-amber', Low: 'badge-green' }[m.priority] || 'badge-gray'}">${esc(m.priority || '—')}</span>`, m.priority_score, m.applicants, Live.pct(m.acceptance_rate), m.active]))
+      : Live.noData('Municipal outreach priorities (from the applicant and qualifier counts)'));
+  } catch (err) { put('municipal-priority-map', Live.noData('Municipal outreach priorities')); }
+}
+load();
+</script>
+</body>
+</html>

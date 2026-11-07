@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scholar Records · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1 id="page-title">Scholar Records</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; View All Scholars</div>
+      </div>
+      <div class="page-header-actions" id="header-actions">
+        <a href="encode-scholar.html" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Add New Scholar</a>
+        <button class="btn btn-outline" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Scholarship Officer</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div id="scope-banner"></div>
+
+      <div class="stat-grid" id="stat-grid-mount"></div>
+
+      <div class="card card-pad mt-24">
+        <div class="tabs-row" id="tabs-row">
+          <button class="tab-btn active" data-filter="all">All</button>
+          <button class="tab-btn" data-filter="active">Active</button>
+          <button class="tab-btn" data-filter="pending_termination">Pending Review</button>
+          <button class="tab-btn" data-filter="graduated">Graduated</button>
+          <button class="tab-btn" data-filter="terminated">Terminated</button>
+        </div>
+
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" class="form-control" id="search-input" aria-label="Search scholars" placeholder="Search by Scholar ID, school, HEI, municipality…">
+          </div>
+          <select class="form-control" style="max-width:180px;" id="filter-municipality" aria-label="Filter by municipality"><option value="">All Municipalities</option></select>
+          <select class="form-control" style="max-width:200px;" id="filter-standing" aria-label="Filter by academic standing">
+            <option value="">All Academic Standing</option>
+          </select>
+          <div style="position:relative;">
+            <button class="btn btn-outline dropdown-trigger" onclick="toggleDropdown('import-menu')" aria-haspopup="true" aria-controls="import-menu"><i class="fa-solid fa-upload"></i> Import</button>
+            <div class="dropdown-menu" id="import-menu" role="menu">
+              <a class="dropdown-item" role="menuitem" href="#" onclick="event.preventDefault(); this.parentElement.classList.remove('show'); IskoImport.open(() => loadScholars(), 'scholars')">New scholars</a>
+              <a class="dropdown-item" role="menuitem" href="#" onclick="event.preventDefault(); this.parentElement.classList.remove('show'); IskoImport.open(() => loadScholars(), 'academic')">GWA records (by Scholar ID)</a>
+              <a class="dropdown-item" role="menuitem" href="#" onclick="event.preventDefault(); this.parentElement.classList.remove('show'); IskoImport.open(() => loadScholars(), 'stipends')">Stipend records (by Scholar ID)</a>
+            </div>
+          </div>
+          <div style="position:relative; display:none;" id="export-wrap">
+            <button class="btn btn-outline dropdown-trigger" onclick="toggleDropdown('export-menu')" aria-haspopup="true" aria-controls="export-menu"><i class="fa-solid fa-file-export"></i> Export</button>
+            <div class="dropdown-menu" id="export-menu">
+              <a class="dropdown-item" href="#" onclick="event.preventDefault(); exportList('xlsx')">Excel (.xlsx)</a>
+              <a class="dropdown-item" href="#" onclick="event.preventDefault(); exportList('csv')">CSV</a>
+            </div>
+          </div>
+          <label class="text-sm" id="deact-toggle" style="display:none; align-items:center; gap:6px; white-space:nowrap;"><input type="checkbox" id="show-deactivated"> Deactivated only</label>
+        </div>
+
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr id="table-head-row">
+              <th>Scholar ID</th><th>Municipality</th><th>School (SEC)</th><th>HEI</th><th>Cycle</th><th>Year</th><th>Status</th><th>Academic Standing</th><th>Risk</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="scholars-table-body"></tbody>
+          </table>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; flex-wrap:wrap; gap:10px;">
+          <div class="text-sm text-muted" id="pagination-summary">Loading…</div>
+          <div class="pagination" id="pagination"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import CSV Modal -->
+<div class="modal-overlay" id="import-csv-modal"></div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button>
+      <button class="btn btn-primary" id="confirm-modal-btn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/import-modal.js"></script>
+<script>
+renderShell('scholars');
+const isAdmin = ISKOLENS_DATA.currentUser.role === 'admin';
+const urlParams = new URLSearchParams(location.search);
+let currentFilter = urlParams.get('status') || 'all';
+let page = 1;
+let searchTimer = null;
+
+document.getElementById('scope-banner').innerHTML = '';
+if (isAdmin) {
+  document.getElementById('export-wrap').style.display = 'block';
+  document.getElementById('deact-toggle').style.display = 'inline-flex';
+}
+
+function currentParams() {
+  const p = new URLSearchParams({ page, per_page: 25, q: document.getElementById('search-input').value.trim(),
+    municipality_id: document.getElementById('filter-municipality').value,
+    standing: document.getElementById('filter-standing').value });
+  if (currentFilter !== 'all') p.set('status', currentFilter);
+  if (isAdmin && document.getElementById('show-deactivated').checked) p.set('deactivated', '1');
+  return p;
+}
+
+async function loadScholars() {
+  const tbody = document.getElementById('scholars-table-body');
+  try {
+    const data = await IskoAPI.get('/api/scholars?' + currentParams());
+    renderStats(data.stats, data.tab_counts);
+    renderRows(data.scholars);
+    renderPagination(data);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><h3>Could not load scholars</h3><p>${esc(err.message)}</p></div></td></tr>`;
+  }
+}
+
+function renderStats(st, tc) {
+  document.getElementById('stat-grid-mount').innerHTML = `
+    <div class="stat-card"><div class="stat-card-top"><div><div class="stat-value">${st.active}</div><div class="stat-label">Active Scholars</div></div><div class="stat-icon"><i class="fa-solid fa-user-group"></i></div></div><div class="stat-delta flat">${st.total} records in total</div></div>
+    <div class="stat-card accent-red"><div class="stat-card-top"><div><div class="stat-value">${st.below_requirement}</div><div class="stat-label">Below GWA Requirement</div></div><div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div></div><div class="stat-delta down">Active scholars on Probation or Failed</div></div>
+    <div class="stat-card accent-green"><div class="stat-card-top"><div><div class="stat-value">${st.graduated}</div><div class="stat-label">Graduated</div></div><div class="stat-icon green"><i class="fa-solid fa-graduation-cap"></i></div></div><div class="stat-delta flat">All cycles</div></div>
+    <div class="stat-card accent-amber"><div class="stat-card-top"><div><div class="stat-value">${st.terminated}</div><div class="stat-label">Terminated</div></div><div class="stat-icon amber"><i class="fa-solid fa-ban"></i></div></div><div class="stat-delta flat">${st.pending_termination} pending review</div></div>`;
+  // Tab counts follow the current search and filters, so they match the rows listed.
+  const labels = { all: `All (${tc.all})`, active: `Active (${tc.active})`, pending_termination: `Pending Review (${tc.pending_termination})`,
+    graduated: `Graduated (${tc.graduated})`, terminated: `Terminated (${tc.terminated})` };
+  document.querySelectorAll('#tabs-row .tab-btn').forEach(b => {
+    b.textContent = labels[b.dataset.filter];
+    b.classList.toggle('active', b.dataset.filter === currentFilter);
+  });
+}
+
+function renderRows(rows) {
+  const tbody = document.getElementById('scholars-table-body');
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-inbox"></i></div><h3>No scholars found</h3><p>Try a different search or filter, or <a class="link-action" href="encode-scholar.html">encode a new scholar</a>.</p></div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td class="cell-primary">${esc(s.code)}</td>
+      <td>${esc(s.municipality)}</td>
+      <td>${esc(s.secondary_school)}</td>
+      <td>${esc(s.hei)}</td>
+      <td>${esc(s.cycle)}</td>
+      <td>${esc(IskoFmt.yearLevel(s.year_level).replace(' Year', ''))}</td>
+      <td>${s.is_deactivated ? '<span class="badge badge-gray">Deactivated</span>' : scholarStatusBadge(s.status, s.status_label)}</td>
+      <td>${standingBadge(s.academic_standing)}</td>
+      <td>${riskBadge(s.risk)}</td>
+      <td style="white-space:nowrap;">
+        <a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(s.code)}">View</a>
+        ${s.is_deactivated ? (isAdmin ? ` &nbsp;|&nbsp; <a class="link-action" href="#" onclick="event.preventDefault(); restoreScholar('${esc(s.code)}')">Restore</a>` : '')
+          : `${s.is_anonymized ? '' : ` &nbsp;|&nbsp; <a class="link-action" href="scholar-profile.html?id=${encodeURIComponent(s.code)}&edit=1">Edit</a>`}
+        ${isAdmin ? ` &nbsp;|&nbsp; <a class="link-action" style="color:var(--red-600);" href="#" onclick="event.preventDefault(); deactivateScholar('${esc(s.code)}', '${esc(s.last_name)}, ${esc(s.first_name)}')">Deactivate</a>` : ''}`}
+      </td>
+    </tr>`).join('');
+}
+
+function renderPagination(d) {
+  const from = d.total ? (d.page - 1) * d.per_page + 1 : 0;
+  const to = Math.min(d.page * d.per_page, d.total);
+  document.getElementById('pagination-summary').textContent = `Showing ${from} to ${to} of ${d.total} scholars`;
+  const btn = (p, label, disabled, active, aria) => `<button class="page-btn${active ? ' active' : ''}" ${disabled ? 'disabled' : ''} ${active ? 'aria-current="page"' : ''} aria-label="${aria || 'Page ' + p}" onclick="goPage(${p})">${label}</button>`;
+  let html = btn(d.page - 1, '<i class="fa-solid fa-chevron-left" aria-hidden="true"></i>', d.page <= 1, false, 'Previous page');
+  const start = Math.max(1, d.page - 2), end = Math.min(d.pages, start + 4);
+  for (let p = start; p <= end; p++) html += btn(p, p, false, p === d.page);
+  html += btn(d.page + 1, '<i class="fa-solid fa-chevron-right" aria-hidden="true"></i>', d.page >= d.pages, false, 'Next page');
+  document.getElementById('pagination').innerHTML = html;
+}
+function goPage(p) { page = p; loadScholars(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+function deactivateScholar(code, name) {
+  confirmAction(`Deactivate the record for ${name}? It will be hidden from all lists. You can restore it later from this page or from Audit Logs.`, async () => {
+    try { await IskoAPI.post(`/api/scholars/${encodeURIComponent(code)}/deactivate`); showToast('Record deactivated', `${name} is now hidden from scholar lists.`, 'warning'); loadScholars(); }
+    catch (err) { IskoAPI.fail(err); }
+  });
+}
+async function restoreScholar(code) {
+  try { await IskoAPI.post(`/api/scholars/${encodeURIComponent(code)}/restore`); showToast('Record restored', `${code} is visible again.`); loadScholars(); }
+  catch (err) { IskoAPI.fail(err); }
+}
+function exportList(fmt) {
+  const p = currentParams(); p.delete('page'); p.delete('per_page'); p.set('format', fmt);
+  IskoAPI.download('/api/scholars/export?' + p);
+  document.getElementById('export-menu').classList.remove('show');
+}
+
+(async function init() {
+  document.getElementById('scholars-table-body').innerHTML = '<tr class="loading-row"><td colspan="10">Loading scholars…</td></tr>';
+  try {
+    const lk = await IskoAPI.lookups();
+    const pref = ISKOLENS_SESSION.preferences.default_municipality_id;
+    IskoAPI.fillSelect('filter-municipality', lk.municipalities, 'All Municipalities', urlParams.get('municipality_id') || pref || '');
+    IskoAPI.fillSelect('filter-standing', lk.options.standing_filters, 'All Academic Standing', urlParams.get('standing') || '', 'label', 'value');
+  } catch (err) { /* filters stay empty; list still loads */ }
+  loadScholars();
+})();
+
+document.querySelectorAll('#tabs-row .tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => { currentFilter = btn.dataset.filter; page = 1; loadScholars(); });
+});
+document.getElementById('search-input').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { page = 1; loadScholars(); }, 250); });
+['filter-municipality', 'filter-standing', 'show-deactivated'].forEach(id =>
+  document.getElementById(id).addEventListener('change', () => { page = 1; loadScholars(); }));
+</script>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-header">
+    <img src="../assets/images/dost-logo.png" alt="DOST logo">
+    <div class="auth-header-text">
+      <div class="rep-line">Republic of the Philippines</div>
+      <div class="inst-line">Science Education Institute</div>
+      <div class="brand-line">DOST - IskoLens</div>
+    </div>
+  </div>
+
+  <div class="auth-body">
+    <div class="auth-card" style="max-width: 500px;">
+      <h1>Create Your Account</h1>
+      <p class="auth-sub">Request a Scholarship Officer account for DOST Davao Oriental</p>
+
+      <div class="auth-status-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <div>This form creates a <strong>Scholarship Officer</strong> account request. Every new account must be reviewed and approved by a DOST Davao Oriental Administrator before you can sign in. Administrator accounts are provisioned internally and are not self-registered.</div>
+      </div>
+
+      <form id="signup-form" onsubmit="return handleSignup(event)" novalidate>
+        <div class="auth-field-row">
+          <div class="auth-field" id="field-firstname">
+            <label>First Name<span class="required">*</span></label>
+            <input type="text" placeholder="Enter your first name" id="signup-firstname" required>
+            <div class="auth-field-error">First name is required.</div>
+          </div>
+          <div class="auth-field" id="field-lastname">
+            <label>Last Name<span class="required">*</span></label>
+            <input type="text" placeholder="Enter your last name" id="signup-lastname" required>
+            <div class="auth-field-error">Last name is required.</div>
+          </div>
+        </div>
+
+        <div class="auth-field" id="field-email">
+          <label>Email<span class="required">*</span></label>
+          <input type="email" placeholder="name@dost-davaooriental.gov.ph" id="signup-email" required>
+          <div class="auth-field-error">Please enter a valid email address.</div>
+        </div>
+
+        <div class="auth-field" id="field-username">
+          <label>Desired Username<span class="required">*</span></label>
+          <input type="text" placeholder="e.g. officer_delacruz" id="signup-username" required>
+          <div class="auth-field-error">Please choose a username.</div>
+        </div>
+
+        <div class="auth-field" id="field-password">
+          <label>Password<span class="required">*</span></label>
+          <div class="auth-input-wrap">
+            <input type="password" placeholder="Create a password" id="signup-password" required>
+            <button type="button" class="auth-toggle-eye" aria-label="Show or hide password" onclick="togglePasswordVisibility('signup-password', this)">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <div class="auth-field-error">Use at least 8 characters with an uppercase letter, a lowercase letter, a number and a symbol.</div>
+          <ul class="pw-rules" id="pw-rules" aria-live="polite" hidden></ul>
+        </div>
+
+        <div class="auth-field" id="field-confirm">
+          <label>Confirm Password<span class="required">*</span></label>
+          <div class="auth-input-wrap">
+            <input type="password" placeholder="Re-enter your password" id="signup-confirm" required>
+            <button type="button" class="auth-toggle-eye" aria-label="Show or hide password" onclick="togglePasswordVisibility('signup-confirm', this)">
+              <i class="fa-solid fa-eye"></i>
+            </button>
+          </div>
+          <div class="auth-field-error">Passwords do not match.</div>
+        </div>
+
+        <label class="auth-consent-check">
+          <input type="checkbox" id="signup-consent" required>
+          <span>I confirm that the information above is accurate and I consent to the processing of my account information as described in the <a class="auth-link" href="privacy-notice.html" target="_blank" rel="noopener">Privacy Notice</a>.</span>
+        </label>
+
+        <button type="submit" class="auth-btn-primary">Create Account</button>
+      </form>
+
+      <div class="auth-footnote">
+        Already have an account? <a class="auth-link" href="login.html">Sign In</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/data.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+function togglePasswordVisibility(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const icon = btn.querySelector('i');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.classList.replace('fa-eye', 'fa-eye-slash');
+  } else {
+    input.type = 'password';
+    icon.classList.replace('fa-eye-slash', 'fa-eye');
+  }
+}
+
+async function handleSignup(e) {
+  e.preventDefault();
+  const fields = {
+    firstname: document.getElementById('signup-firstname'),
+    lastname: document.getElementById('signup-lastname'),
+    email: document.getElementById('signup-email'),
+    username: document.getElementById('signup-username'),
+    password: document.getElementById('signup-password'),
+    confirm: document.getElementById('signup-confirm')
+  };
+  const consent = document.getElementById('signup-consent');
+  let valid = true;
+  Object.keys(fields).forEach(key => document.getElementById('field-' + key)?.classList.remove('has-error'));
+  const pw = fields.password.value;
+  if (!fields.firstname.value.trim()) { document.getElementById('field-firstname').classList.add('has-error'); valid = false; }
+  if (!fields.lastname.value.trim()) { document.getElementById('field-lastname').classList.add('has-error'); valid = false; }
+  if (!fields.email.value.trim() || !fields.email.value.includes('@')) { document.getElementById('field-email').classList.add('has-error'); valid = false; }
+  if (!/^[A-Za-z0-9._]{3,40}$/.test(fields.username.value.trim())) { document.getElementById('field-username').classList.add('has-error'); valid = false; }
+  if (pw.length < 8 || !/[A-Z]/.test(pw) || !/[a-z]/.test(pw) || !/\d/.test(pw) || !/[^A-Za-z0-9\s]/.test(pw)) { document.getElementById('field-password').classList.add('has-error'); valid = false; }
+  if (fields.confirm.value !== pw || !fields.confirm.value) { document.getElementById('field-confirm').classList.add('has-error'); valid = false; }
+  if (!valid) return false;
+  if (!consent.checked) {
+    showToast('Consent required', 'Confirm the Data Privacy terms before continuing.', 'error');
+    return false;
+  }
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.disabled = true;
+  try {
+    const res = await IskoAPI.post('/api/auth/signup', {
+      first_name: fields.firstname.value.trim(), last_name: fields.lastname.value.trim(),
+      email: fields.email.value.trim(), username: fields.username.value.trim(),
+      password: pw, confirm_password: fields.confirm.value, privacy_consent: true
+    });
+    // The status token lets the pending page check this request only.
+    try { localStorage.setItem('iskolens_signup_token', res.status_token); } catch (err) {}
+    window.location.href = 'pending-approval.html?token=' + encodeURIComponent(res.status_token);
+  } catch (err) {
+    btn.disabled = false;
+    const map = { first_name: 'firstname', last_name: 'lastname', email: 'email', username: 'username', password: 'password', confirm_password: 'confirm' };
+    Object.entries(err.fieldErrors).forEach(([f, msg]) => {
+      const wrap = document.getElementById('field-' + map[f]);
+      if (wrap) { wrap.classList.add('has-error'); const m = wrap.querySelector('.auth-field-error'); if (m) m.textContent = msg; }
+    });
+    showToast('Account request not sent', err.message, 'error');
+  }
+  return false;
+}
+</script>
+<script>
+fetch('/api/auth/config').then((r) => r.json()).then((c) => {
+  if (c.allow_signup) return;
+  const form = document.querySelector('form');
+  if (form) form.outerHTML = '<div class="auth-field-error" style="display:block; margin:16px 0;">Sign-up is turned off. Accounts are created by your DOST Davao Oriental Administrator.</div><a class="auth-btn-primary" style="display:block; text-align:center; text-decoration:none;" href="login.html">Back to sign in</a>';
+}).catch(() => {});
+</script>
+<script>
+/* Password rules shown the moment the Password box is clicked, updated as the user types.
+   The rules come from the server so they always match its validation. */
+(function () {
+  const pw = document.getElementById('signup-password');
+  const confirm = document.getElementById('signup-confirm');
+  const list = document.getElementById('pw-rules');
+  let rules = { min_length: 8, max_length: 128, needs_uppercase: true, needs_lowercase: true, needs_number: true, needs_symbol: true };
+  fetch('/api/auth/config').then((r) => r.json()).then((c) => { if (c.password_rules) { rules = c.password_rules; if (!list.hidden) check(); } }).catch(() => {});
+  function items(v) {
+    const out = [[v.length >= rules.min_length, `At least ${rules.min_length} characters`]];
+    if (rules.needs_uppercase) out.push([/[A-Z]/.test(v), 'An uppercase letter']);
+    if (rules.needs_lowercase) out.push([/[a-z]/.test(v), 'A lowercase letter']);
+    if (rules.needs_number) out.push([/\d/.test(v), 'A number']);
+    if (rules.needs_symbol) out.push([/[^A-Za-z0-9\s]/.test(v), 'A symbol (such as ! @ # $)']);
+    return out;
+  }
+  function check() {
+    const v = pw.value;
+    const res = items(v);
+    list.innerHTML = res.map(([ok, text]) => `<li class="${ok ? 'ok' : 'bad'}"><i class="fa-solid ${ok ? 'fa-circle-check' : 'fa-circle-xmark'}" aria-hidden="true"></i> ${text}</li>`).join('');
+    const allOk = res.every(([ok]) => ok) && v.length <= rules.max_length;
+    document.getElementById('field-password').classList.toggle('has-error', !allOk);
+    if (confirm.value) document.getElementById('field-confirm').classList.toggle('has-error', confirm.value !== pw.value);
+  }
+  pw.addEventListener('focus', () => {
+    list.hidden = false;
+    document.querySelector('#field-password .auth-field-error').style.display = 'none';   // the checklist replaces the one-line message
+    check();
+  });
+  pw.addEventListener('input', check);
+  confirm.addEventListener('input', () => document.getElementById('field-confirm').classList.toggle('has-error', confirm.value !== pw.value));
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reference Lists · DOST-IskoLens</title>
+<script src="../js/ui-scale.js"></script>
+<link rel="stylesheet" href="../vendor/fontawesome/css/all.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/components.css">
+<link rel="stylesheet" href="../css/responsive.css">
+<link rel="stylesheet" href="../css/theme-dark.css">
+</head>
+<body>
+<div class="app-shell">
+  <div id="sidebar-mount"></div>
+  <div class="main-content">
+    <div id="topbar-mount"></div>
+
+    <div class="page-header-row">
+      <div class="page-title-block">
+        <h1>Reference Lists</h1>
+        <div class="breadcrumb"><a href="dashboard.html">Home</a> &gt; Reference Lists</div>
+      </div>
+      <div class="page-header-actions">
+        <button class="btn btn-primary" id="add-btn" onclick="openAdd()"><i class="fa-solid fa-plus"></i> <span id="add-label">Add Secondary School</span></button>
+        <button class="btn btn-outline" onclick="loadLists()"><i class="fa-solid fa-rotate-right"></i> Refresh</button>
+        <span class="role-pill js-role-pill">Administrator</span>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <p class="page-lead" style="margin-bottom:20px;">The lists behind the dropdowns in encoding, editing and spreadsheet import. Deactivating an entry hides it for new records; scholars who already use it keep it. New academic-year cycles are added automatically each June, and you can add future ones here.</p>
+
+      <div class="card card-pad">
+        <div class="tabs-row" id="tabs-row">
+          <button class="tab-btn active" data-kind="schools">Secondary Schools</button>
+          <button class="tab-btn" data-kind="heis">HEIs</button>
+          <button class="tab-btn" data-kind="programs">Scholarship Programs</button>
+          <button class="tab-btn" data-kind="cycles">Scholarship Cycles</button>
+        </div>
+        <div class="table-toolbar">
+          <div class="search-input-wrap">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" class="form-control" id="search-input" aria-label="Search this list" placeholder="Search this list…">
+          </div>
+          <select class="form-control" style="max-width:200px;" id="filter-muni" aria-label="Filter by municipality"><option value="">All Municipalities</option></select>
+          <select class="form-control" style="max-width:160px;" id="filter-status" aria-label="Filter by status"><option value="">Active and inactive</option></select>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead id="ref-head"></thead>
+            <tbody id="ref-body"><tr class="loading-row"><td colspan="5">Loading…</td></tr></tbody>
+          </table>
+        </div>
+        <div class="text-sm text-muted" id="ref-summary" style="margin-top:14px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="ref-modal">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-header"><span id="ref-modal-title">Add</span><button class="modal-close" onclick="closeModal('ref-modal')">&times;</button></div>
+    <div class="modal-body">
+      <div class="form-group" id="rf-name-wrap"><label class="form-label">Name <span class="required">*</span></label><input class="form-control" id="rf-name"></div>
+      <div class="form-group" id="rf-muni-wrap"><label class="form-label">Municipality <span class="required">*</span></label><select class="form-control" id="rf-muni"></select><div class="form-hint" id="rf-muni-hint"></div></div>
+      <div class="form-group" id="rf-year-wrap"><label class="form-label">Starting Year <span class="required">*</span></label><input class="form-control" id="rf-year" type="number" min="2000" max="2100" placeholder="e.g. 2027 for 2027-2028"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('ref-modal')">Cancel</button><button class="btn btn-primary" onclick="saveRef()">Save</button></div>
+  </div>
+</div>
+
+<div id="confirm-modal" class="modal-overlay">
+  <div class="modal-box" style="max-width:420px;">
+    <div class="modal-header"><span>Please Confirm</span><button class="modal-close" onclick="closeModal('confirm-modal')">&times;</button></div>
+    <div class="modal-body"><p id="confirm-modal-message"></p></div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('confirm-modal')">Cancel</button><button class="btn btn-primary" id="confirm-modal-btn">Confirm</button></div>
+  </div>
+</div>
+
+<script src="/api/session.js"></script>
+<script src="../js/data.js"></script>
+<script src="../js/navigation.js"></script>
+<script src="../js/main.js"></script>
+<script src="../js/api.js"></script>
+<script>
+renderShell('reference');
+const LABELS = { schools: 'Secondary School', heis: 'HEI', programs: 'Scholarship Program', cycles: 'Scholarship Cycle' };
+let DATA = null;
+let kind = new URLSearchParams(location.search).get('list') || 'schools';
+let editing = null;
+
+async function loadLists() {
+  try {
+    DATA = await IskoAPI.get('/api/admin/reference');
+    if (document.getElementById('filter-status').options.length === 1) IskoAPI.fillSelect('filter-status', (await IskoAPI.lookups()).options.reference_status_filters, 'Active and inactive', '', 'label', 'value');
+    IskoAPI.fillSelect('filter-muni', DATA.municipalities, 'All Municipalities', document.getElementById('filter-muni').value);
+    render();
+  } catch (err) { IskoAPI.fail(err, 'Could not load the lists'); }
+}
+
+function render() {
+  document.querySelectorAll('#tabs-row .tab-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.kind === kind);
+    if (DATA) b.textContent = b.textContent.replace(/ \(\d+\)$/, '') + ` (${DATA[b.dataset.kind].length})`;
+  });
+  document.getElementById('add-label').textContent = 'Add ' + LABELS[kind];
+  document.getElementById('filter-muni').style.display = kind === 'schools' ? '' : 'none';
+  const isSchool = kind === 'schools', isCycle = kind === 'cycles';
+  document.getElementById('ref-head').innerHTML = `<tr><th>${isCycle ? 'Academic Year' : 'Name'}</th>${isSchool ? '<th>Municipality</th>' : ''}<th>Scholars Using It</th><th>Status</th><th>Actions</th></tr>`;
+  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const muni = document.getElementById('filter-muni').value;
+  const st = document.getElementById('filter-status').value;
+  const rows = DATA[kind].filter(r => (!q || r.name.toLowerCase().includes(q) || (r.municipality || '').toLowerCase().includes(q))
+    && (!isSchool || !muni || String(r.municipality_id) === muni) && (st === '' || String(+r.is_active) === st));
+  const cols = isSchool ? 5 : 4;
+  document.getElementById('ref-body').innerHTML = rows.length ? rows.map(r => `
+    <tr>
+      <td class="cell-primary">${esc(r.name)}</td>
+      ${isSchool ? `<td>${esc(r.municipality)}</td>` : ''}
+      <td>${r.scholars}</td>
+      <td>${r.is_active ? '<span class="badge badge-dot badge-green">Active</span>' : '<span class="badge badge-dot badge-gray">Inactive</span>'}</td>
+      <td style="white-space:nowrap;">
+        ${isCycle ? '' : `<button class="btn btn-outline btn-sm" onclick="openEdit(${r.id})">Edit</button>`}
+        ${r.is_active ? `<button class="btn btn-danger-outline btn-sm" onclick="setActive(${r.id}, false)">Deactivate</button>`
+                      : `<button class="btn btn-outline btn-sm" onclick="setActive(${r.id}, true)">Reactivate</button>`}
+      </td>
+    </tr>`).join('') : `<tr><td colspan="${cols}"><div class="empty-state"><div class="empty-icon"><i class="fa-solid fa-list"></i></div><h3>Nothing matches</h3><p>Try a different search or filter.</p></div></td></tr>`;
+  const active = DATA[kind].filter(r => r.is_active).length;
+  document.getElementById('ref-summary').textContent = `${active} active, ${DATA[kind].length - active} inactive.` +
+    (isSchool ? ' Seeded schools are placeholders; replace them with DOST Davao Oriental\u2019s official list.' : '');
+}
+
+function openAdd() { editing = null; openForm(null); }
+function openEdit(id) { editing = DATA[kind].find(r => r.id === id); openForm(editing); }
+
+function openForm(item) {
+  const isSchool = kind === 'schools', isCycle = kind === 'cycles';
+  document.getElementById('ref-modal-title').textContent = (item ? 'Edit ' : 'Add ') + LABELS[kind];
+  document.getElementById('rf-name-wrap').style.display = isCycle ? 'none' : '';
+  document.getElementById('rf-muni-wrap').style.display = isSchool ? '' : 'none';
+  document.getElementById('rf-year-wrap').style.display = isCycle ? '' : 'none';
+  document.getElementById('rf-name').value = item ? item.name : '';
+  document.getElementById('rf-year').value = '';
+  if (isSchool) {
+    IskoAPI.fillSelect('rf-muni', DATA.municipalities, 'Select municipality', item ? item.municipality_id : document.getElementById('filter-muni').value);
+    const locked = item && item.scholars > 0;
+    document.getElementById('rf-muni').disabled = !!locked;
+    document.getElementById('rf-muni-hint').textContent = locked ? `${item.scholars} scholar(s) use this school, so its municipality is fixed.` : '';
+  }
+  IskoAPI.clearFieldErrors({ name: 'rf-name', municipality_id: 'rf-muni', start_year: 'rf-year' });
+  openModal('ref-modal');
+}
+
+async function saveRef() {
+  const map = { name: 'rf-name', municipality_id: 'rf-muni', start_year: 'rf-year' };
+  IskoAPI.clearFieldErrors(map);
+  const body = kind === 'cycles' ? { start_year: document.getElementById('rf-year').value }
+    : { name: document.getElementById('rf-name').value, ...(kind === 'schools' ? { municipality_id: document.getElementById('rf-muni').value } : {}) };
+  try {
+    if (editing) await IskoAPI.patch(`/api/admin/reference/${kind}/${editing.id}`, body);
+    else await IskoAPI.post(`/api/admin/reference/${kind}`, body);
+    closeModal('ref-modal');
+    showToast(editing ? 'Saved' : 'Added', `${LABELS[kind]} ${editing ? 'updated' : 'added'}. It is available in the dropdowns now.`);
+    loadLists();
+  } catch (err) { IskoAPI.showFieldErrors(err, map); IskoAPI.fail(err, 'Not saved'); }
+}
+
+function setActive(id, active) {
+  const r = DATA[kind].find(x => x.id === id);
+  const msg = active ? `Reactivate "${r.name}"? It will appear in the dropdowns again.`
+    : `Deactivate "${r.name}"? It will no longer appear for new records.${r.scholars ? ` The ${r.scholars} scholar(s) already using it keep it.` : ''}`;
+  confirmAction(msg, async () => {
+    try {
+      await IskoAPI.patch(`/api/admin/reference/${kind}/${id}`, { is_active: active });
+      showToast(active ? 'Reactivated' : 'Deactivated', `"${r.name}" was ${active ? 'reactivated' : 'deactivated'}.`, active ? 'success' : 'warning');
+      loadLists();
+    } catch (err) { IskoAPI.fail(err); }
+  });
+}
+
+document.querySelectorAll('#tabs-row .tab-btn').forEach(b => b.addEventListener('click', () => { kind = b.dataset.kind; render(); }));
+['search-input', 'filter-muni', 'filter-status'].forEach(id => document.getElementById(id).addEventListener(id === 'search-input' ? 'input' : 'change', () => DATA && render()));
+loadLists();
+</script>
+</body>
+</html>
